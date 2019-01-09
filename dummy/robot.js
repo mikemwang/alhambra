@@ -1,7 +1,5 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
 
-// single castle seed: 983275
-
 var built = false;
 var step = -1;
 
@@ -27,7 +25,7 @@ class MyRobot extends BCAbstractRobot {
                              [-1,-1], 
                              [-1,0], 
                              [-1,1]]
-        this.used_map = null
+        this.explored_map = null
         this.W = null
         this.H = null
     }
@@ -140,50 +138,44 @@ class MyRobot extends BCAbstractRobot {
     }
 
     bfs(x, y) {
-        /*
-        takes in a goal x and y, returns where the robot should move next
-        */
         // init the map used for storing explored nodes
-
         var paths = [[[this.me.x, this.me.y]]]
 
-        if (this.used_map == null) {
-            this.used_map = this.map.slice(0, this.map.length)
+        if (this.explored_map == null) {
+            this.explored_map = this.map.slice(0, this.map.length)
         }
 
-        for (var j in this.used_map){
-            for (var i in this.used_map[0]){
-                this.used_map[j][i] = false
+        for (var j in this.explored_map){
+            for (var i in this.explored_map[0]){
+                this.explored_map[j][i] = false
             }
         }
 
-        this.used_map[this.me.y][this.me.x] = true
+        this.explored_map[this.me.y][this.me.x] = true
 
         var iters = 0
         while (paths.length > 0){
-            //this.log((iters))
-            //this.log(paths)
-            //iters ++
-            //if (iters > 3) {
-            //    break
-            //}
+            this.log((iters))
+            this.log(paths)
+            iters ++
+            if (iters > 3) {
+                break
+            }
             var new_paths = []
-            while (paths.length > 0){
-                var cur_path = paths.shift()  // get the path in the beginning
-                for (var i in this.mvmt_choices){
-                    var newx = cur_path[cur_path.length-1][0] + this.mvmt_choices[i][0] 
-                    var newy = cur_path[cur_path.length-1][1] + this.mvmt_choices[i][1]
-                    //if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                    if (this.in_bounds(newx, newy)){
-                        if (!this.used_map[newy][newx]){
-                            this.used_map[newy][newx] = true
-                            var newpath = cur_path.slice(0, cur_path.length)
-                            newpath.push([newx, newy])
-                            if (newx == x && newy == y) {
-                                return newpath
-                            }
-                            new_paths.push(newpath)
+            var cur_path = paths.shift()  // get the path in the beginning
+            for (var i in this.mvmt_choices){
+                var newx = cur_path[cur_path.length-1][0] + this.mvmt_choices[i][0] 
+                var newy = cur_path[cur_path.length-1][1] + this.mvmt_choices[i][1]
+                //if (this.in_bounds(newx, newy) && this.map[newy][newx]){
+                if (this.in_bounds(newx, newy)){
+                    if (!this.explored_map[newy][newx]){
+                        this.explored_map[newy][newx] = true
+                        var newpath = cur_path.slice(0, cur_path.length)
+                        newpath.push([newx, newy])
+                        if (newx == x && newy == y) {
+                            return newpath
                         }
+                        new_paths.push(newpath)
                     }
                 }
             }
@@ -206,8 +198,7 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.PILGRIM){
             //return this.move_toward_location(0,H);
-            this.bfs(this.W-1,0)
-            this.log("good")
+            //this.log(this.bfs(this.me.x+5,this.me.y+2))
             // move toward nearest fuel
             // mine
             // move toward nearest castle/church
@@ -217,9 +208,10 @@ class MyRobot extends BCAbstractRobot {
             // mine
             // move to castle/church
             // deposit
-        }
+       }
 
-        if (this.me.unit === SPECS.CASTLE) {
+       if (this.me.unit === SPECS.CASTLE) {
+            return
             if (this.num_pilgrims < 1){
                 this.num_pilgrims ++;
                 // find free tile to build pilgrim
