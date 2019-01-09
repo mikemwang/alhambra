@@ -5,19 +5,13 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 var built = false;
 var step = -1;
 
-//class Castle extends BCAbstractRobot {
-//    constructor(){
-//        super();
-//        this.num_pilgrims = 0;
-//    }
-//}
 
 class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
         this.num_pilgrims = 0;
-        this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1], 
-                             [-1,+0],          [+1,+0], 
+        this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
+                             [-1,+0],          [+1,+0],
                              [-1,+1], [+0,+1], [+1,+1]]
         this.used_map = null
         this.W = null
@@ -31,14 +25,38 @@ class MyRobot extends BCAbstractRobot {
 
     traversable(x, y, visible_robot_map) {
         // check if a square is in bounds, not terrain, and not occupied
-        return (this.in_bounds(x, y) && this.map[y][x])//&& visible_robot_map[y][x] <= 0)
+        return (this.in_bounds(x, y) && this.map[y][x] && visible_robot_map[y][x] <= 0)
+    }
+
+    random_ordering(inp_array){
+        var array = inp_array.slice()
+        var currentIndex = array.length, temporaryValue, randomIndex;
+
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+
+            // And swap it with the current element.
+            temporaryValue = array[currentIndex];
+            array[currentIndex] = array[randomIndex];
+            array[randomIndex] = temporaryValue;
+        }
+
+        return array;
     }
 
     bfs(x, y) {
         /*
-        takes in a goal x and y, returns where the robot should move next
+        args: in a goal x and y
+        returns: the next point to which the robot should move, null if no path
+
+        ***notes
+        traffic-jam behavior: if the way to the goal, or the goal itself, is 
+        blocked by another robot, this robot will stop
         */
-        // init the map used for storing explored nodes
 
         var paths = [[[this.me.x, this.me.y]]]
 
@@ -65,11 +83,10 @@ class MyRobot extends BCAbstractRobot {
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                for (var i in this.mvmt_choices){
-                    var newx = cur_path[cur_path.length-1][0] + this.mvmt_choices[i][0] 
-                    var newy = cur_path[cur_path.length-1][1] + this.mvmt_choices[i][1]
-                    //if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                    //if (this.in_bounds(newx, newy)){
+                var choices = this.random_ordering(this.mvmt_choices)
+                for (var i in choices){
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
                     if (this.traversable(newx, newy, visible_robot_map)){
                         if (!this.used_map[newy][newx]){
                             this.used_map[newy][newx] = true
@@ -88,11 +105,11 @@ class MyRobot extends BCAbstractRobot {
             }
         }
         this.log("no path found")
-        return [this.me.x,this.me.y]
+        return null
     }
 
-    turn() { 
-        step++; 
+    turn() {
+        step++;
         if (this.H == null){
             this.H = this.map.length
         }
