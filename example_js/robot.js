@@ -16,127 +16,22 @@ class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
         this.num_pilgrims = 0;
-        this.pilgrim_phase = "TO_FUEL";
-        //this.mvmt_choices = [[0,-1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
-        //this.mvmt_choices = [[1,0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
-        this.mvmt_choices = [[0,1],
-                             [1,1], 
-                             [1,0], 
-                             [1,-1], 
-                             [0,-1], 
-                             [-1,-1], 
-                             [-1,0], 
-                             [-1,1]]
+        this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1], 
+                             [-1,+0],          [+1,+0], 
+                             [-1,+1], [+0,+1], [+1,+1]]
         this.used_map = null
         this.W = null
         this.H = null
     }
 
-    dir_list_centered(center) {
-        var result = [];
-        result.push(this.mvmt_choices[center]);
-        for (var i = 1; i < 4; i++){
-            result.push(this.mvmt_choices[(center-i+8)%8]);
-            result.push(this.mvmt_choices[(center+i+8)%8]);
-        }
-        result.push(this.mvmt_choices[(center+4)%8])
-        return result;
-    }
-
-    choose_best_dir(dir){
-        var choices = this.dir_list_centered(dir);
-        for (var i in choices){
-            var cmd = choices[i];
-            var x = this.me.x + cmd[0];
-            var y = this.me.y + cmd[1];
-            if (this.in_bounds(x, y) && this.getVisibleRobotMap()[y][x] <= 0) {
-                return cmd;
-            }
-        }
-        return [0,0];
-
-    }
-
-    move_toward_location(x, y) {
-        // TODO: add random variations in movement, and jumping
-        var dx = x - this.me.x;
-        var dy = y - this.me.y;
-        var d = dx*dx + dy*dy;
-        var s = SPECS.UNITS[this.me.unit].SPEED;
-        if ( d <= s) {
-            return this.move(x, y);
-        }
-        dx += Math.sign(dx)*0.01;
-        var tan = dy/dx;
-        //this.log("move from (" + (this.me.x) + ", " + (this.me.y) +") to ("+(x) + ", " + (y) + "): " + (tan));
-        var choice = [0,0];
-
-        if (dy >= 0 && dx > 0){ 
-            if (tan <0.41){
-                // east
-                choice = this.choose_best_dir(0);
-            }
-            else if (tan >= 0.41 && tan <2.41){
-                // northeast
-                choice = this.choose_best_dir(1);
-            }
-            else {
-                // north
-                choice = this.choose_best_dir(2);
-            }
-        }
-        if (dy >= 0 && dx < 0){
-            if (tan <= -2.41){
-                // north
-                choice = this.choose_best_dir(2);
-            }
-            else if (tan <= -0.41 && tan >-2.41){
-                // northwest
-                choice = this.choose_best_dir(3);
-            }
-            else {
-                // west
-                choice = this.choose_best_dir(4);
-            }
-        }
-        if (dy <= 0 && dx < 0){ 
-            if (tan > 2.41){
-                // south
-                choice = this.choose_best_dir(6);
-            }
-            else if (tan >= 0.41 && tan <2.41){
-                // southwest
-                choice = this.choose_best_dir(5);
-            }
-            else {
-                // west
-                choice = this.choose_best_dir(4);
-            }
-        }
-        if (dy <= 0 && dx > 0){
-            if (tan <= -2.41){
-                // south
-                choice = this.choose_best_dir(6);
-            }
-            else if (tan <= -0.41 && tan >-2.41){
-                // southeast
-                choice = this.choose_best_dir(7);
-            }
-            else {
-                // east
-                choice = this.choose_best_dir(0);
-            }
-        }
-        return this.move(choice[0], choice[1])
-        //this.log("move from (" + (this.me.x) + ", " + (this.me.y) +") to ("+(x) + ", " + (y)+"): " + (sdx) + " ," + (sdy));
-    }
-
-    square_d(x1, y1, x2, y2) {
-        return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
-    }
-
     in_bounds(x, y) {
+        // check if a tile is in bounds
         return (x >= 0 && x < this.W && y >= 0 && y < this.H)
+    }
+
+    traversable(x, y, visible_robot_map) {
+        // check if a square is in bounds, not terrain, and not occupied
+        return (this.in_bounds(x, y) && this.map[y][x])//&& visible_robot_map[y][x] <= 0)
     }
 
     bfs(x, y) {
@@ -148,7 +43,13 @@ class MyRobot extends BCAbstractRobot {
         var paths = [[[this.me.x, this.me.y]]]
 
         if (this.used_map == null) {
-            this.used_map = this.map.slice(0, this.map.length)
+            this.used_map = []
+            for (var i = 0; i < this.H; i++){
+                this.used_map[i] = []
+                for (var j = 0; j<  this.W; j++){
+                    this.used_map[i][j] = false
+                }
+            }
         }
 
         for (var j in this.used_map){
@@ -158,15 +59,9 @@ class MyRobot extends BCAbstractRobot {
         }
 
         this.used_map[this.me.y][this.me.x] = true
+        var visible_robot_map = this.getVisibleRobotMap()
 
-        var iters = 0
         while (paths.length > 0){
-            //this.log((iters))
-            //this.log(paths)
-            //iters ++
-            //if (iters > 3) {
-            //    break
-            //}
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
@@ -174,13 +69,14 @@ class MyRobot extends BCAbstractRobot {
                     var newx = cur_path[cur_path.length-1][0] + this.mvmt_choices[i][0] 
                     var newy = cur_path[cur_path.length-1][1] + this.mvmt_choices[i][1]
                     //if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                    if (this.in_bounds(newx, newy)){
+                    //if (this.in_bounds(newx, newy)){
+                    if (this.traversable(newx, newy, visible_robot_map)){
                         if (!this.used_map[newy][newx]){
                             this.used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
                             if (newx == x && newy == y) {
-                                return newpath
+                                return [newpath[1][0] - this.me.x, newpath[1][1] - this.me.y] // since newpath[0] is the robot's starting point
                             }
                             new_paths.push(newpath)
                         }
@@ -191,8 +87,8 @@ class MyRobot extends BCAbstractRobot {
                 paths = new_paths.slice(0, new_paths.length)
             }
         }
-//        this.log(iters)
         this.log("no path found")
+        return [this.me.x,this.me.y]
     }
 
     turn() { 
@@ -206,8 +102,7 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.PILGRIM){
             //return this.move_toward_location(0,H);
-            this.bfs(this.W-1,0)
-            this.log("good")
+            return this.move(...this.bfs(this.W-1,this.H-1))
             // move toward nearest fuel
             // mine
             // move toward nearest castle/church
