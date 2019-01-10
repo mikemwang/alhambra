@@ -53,8 +53,8 @@ class MyRobot extends BCAbstractRobot {
 
     bfs(startx, starty, x, y) {
         /*
-        args: in a goal x and y
-        returns: the next dx dy to which the robot should move, null if no path
+        args: a start location startx starty, in a goal x and y
+        returns: a list of waypoints, with index 0 being the next point to go
 
         ***notes
         traffic-jam behavior: if the way to the goal, or the goal itself, is
@@ -157,7 +157,47 @@ class MyRobot extends BCAbstractRobot {
             // deposit
         }
 
+        // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
+            if (step == 0){
+                this.sym = find_sym(this.map)                
+                var x_start = 0
+                var x_bound = this.W -1
+                var y_start = 0
+                var y_bound = this.H -1
+                if (this.sym == 'x'){
+                    y_bound = Math.floor(this.H*0.5) + this.H%2
+                    if (this.me.y <= y_bound){
+                        y_start = 0
+                    } else{
+                        y_start = y_bound
+                        y_bound = this.H -1
+                    }
+                } else {
+                    x_bound = Math.floor(this.W*0.5) + this.W%2
+                    if (this.me.x <= x_bound){
+                        x_start = 0
+                    } else{
+                        x_start = x_bound
+                        x_bound = this.W -1
+                    }
+                }
+                var best_dist = 1000
+                var best_path = []
+                for (var i = x_start; i <= x_bound; i++){
+                    for (var j = y_start; j <= y_bound; j++){
+                        if (this.fuel_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j)
+                            if (l.length < best_dist){
+                                best_dist = l.length
+                                best_path = l.slice()
+                            }
+                        }
+                    }
+                }
+                this.castleTalk(Math.min(255, best_dist))
+            }
+            return
             if (step == 0 && this.getVisibleRobots().length > 3){
                 this.first_castle = false
             }
