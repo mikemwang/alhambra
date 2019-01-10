@@ -5,7 +5,6 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 var built = false;
 var step = -1;
 
-
 class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
@@ -16,12 +15,15 @@ class MyRobot extends BCAbstractRobot {
         this.used_map = null
         this.W = null
         this.H = null
+        this.sym = null
+        this.first_castle = true
     }
 
     in_bounds(x, y) {
         // check if a tile is in bounds
         return (x >= 0 && x < this.W && y >= 0 && y < this.H)
     }
+
 
     traversable(x, y, visible_robot_map) {
         // check if a square is in bounds, not terrain, and not occupied
@@ -48,17 +50,22 @@ class MyRobot extends BCAbstractRobot {
         return array;
     }
 
-    bfs(x, y) {
+
+    bfs(startx, starty, x, y) {
         /*
         args: in a goal x and y
-        returns: the next point to which the robot should move, null if no path
+        returns: the next dx dy to which the robot should move, null if no path
 
         ***notes
-        traffic-jam behavior: if the way to the goal, or the goal itself, is 
+        traffic-jam behavior: if the way to the goal, or the goal itself, is
         blocked by another robot, this robot will stop
         */
 
-        var paths = [[[this.me.x, this.me.y]]]
+        if (x == startx && y == starty){
+            return null
+        }
+
+        var paths = [[[startx, starty]]]
 
         if (this.used_map == null) {
             this.used_map = []
@@ -76,7 +83,7 @@ class MyRobot extends BCAbstractRobot {
             }
         }
 
-        this.used_map[this.me.y][this.me.x] = true
+        this.used_map[starty][startx] = true
         var visible_robot_map = this.getVisibleRobotMap()
 
         while (paths.length > 0){
@@ -93,7 +100,7 @@ class MyRobot extends BCAbstractRobot {
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
                             if (newx == x && newy == y) {
-                                return [newpath[1][0] - this.me.x, newpath[1][1] - this.me.y] // since newpath[0] is the robot's starting point
+                                return newpath.slice(1)
                             }
                             new_paths.push(newpath)
                         }
@@ -101,10 +108,9 @@ class MyRobot extends BCAbstractRobot {
                 }
             }
             if (new_paths.length > 0) {
-                paths = new_paths.slice(0, new_paths.length)
+                paths = new_paths.slice()
             }
         }
-        this.log("no path found")
         return null
     }
 
@@ -117,9 +123,29 @@ class MyRobot extends BCAbstractRobot {
             this.W = this.map[0].length;
         }
 
+        if (this.sym == null){
+            find_sym(this.map)
+        }
+
         if (this.me.unit === SPECS.PILGRIM){
-            //return this.move_toward_location(0,H);
-            return this.move(...this.bfs(this.W-1,this.H-1))
+            // find corresponding castle
+            //var nearby_units = this.getVisibleRobots()
+            //for (var i in nearby_units){
+            //    if (nearby_units[i].unit == SPEC.CASTLE) {
+            //        var castlex = nearby_units[i].x
+            //        var castley = nearby_units[i].y
+            //        var otherx = 0
+            //        var othery = 0
+            //        if (this.sym == 'x'){
+            //            
+            //        }
+            //    }
+            //}
+
+            var path = this.bfs(this.me.x, this.me.y, this.W-1, this.H-1)
+            if (path != null){
+                return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+            }
             // move toward nearest fuel
             // mine
             // move toward nearest castle/church
@@ -132,7 +158,17 @@ class MyRobot extends BCAbstractRobot {
         }
 
         if (this.me.unit === SPECS.CASTLE) {
-            if (this.num_pilgrims < 1){
+            if (step == 0 && this.getVisibleRobots().length > 3){
+                this.first_castle = false
+            }
+            if (this.num_pilgrims < 1 && this.first_castle){
+                var units = this.getVisibleRobots()
+                for (var unit in units){
+                    this.log(units[unit])
+                    if (units[unit].unit === SPECS.CASTLE){
+                        this.log("castle at " + (units[unit].x) + " ," + (units[unit].y))
+                    }
+                }
                 this.num_pilgrims ++;
                 // find free tile to build pilgrim
                 for (var i in this.mvmt_choices){
@@ -151,4 +187,109 @@ class MyRobot extends BCAbstractRobot {
     }
 }
 
+function find_sym(map){
+    for (var i = 0; i < map.length; i++){
+      for (var j = 0; j < map.length; j++){
+        var ii = map.length - 1 - i
+        if (map[i][j] !== map[ii][j]){
+          return 'y'
+        }
+      }
+    }
+    return 'x'
+ }
+
 var robot = new MyRobot();
+
+/*
+round 0
+ALL CASTLES
+- castletalk nearest fuel bfs path dist
+- count the castles
+
+round 1
+ALL CASTLES
+- if there is a castle with closer fuel:
+- set MAINCASTLE false
+- find location of corresponding enemy castle
+- castletalk enemy castle X 
+
+- else if visibleunits.length > number of castles recorded last turn:
+- set MAINCASTLE false
+- find location of corresponding enemy castle
+- castletalk enemy castle X 
+
+- else
+- set MAINCASTLE true
+- build pilgrim
+
+PILGRIM1:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn 2
+OTHERCASTLES:
+- castletalk(enemy castle Y)
+
+MAINCASTLE:
+- read enemy castle Xs on castletalk
+- build PROHET1
+
+PILGRIM1:
+- move toward enemy castle 0
+
+PROPHET1:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn3:
+MAINCASTLE:
+- read enemy castle Ys on castletalk
+- calculate enemy castle positions
+- broadcast enemy castle 1 position, range 1
+- build PROHET2
+
+PILGRIM1, PROPHET1:
+- move toward enemycastle0
+
+PROPHET2:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn4:
+MAINCASTLE:
+- broadcast enemy castle 2 position, range 1
+- build PROPHET3
+
+PILGRIM1, PROPHET1, PROPHET2
+- move toward enemycastle0
+
+PROPHET3:
+- read enemycastle1 from castle broadcast
+- broadcast enemycastle1, range 3
+- calculate enemycastle0 based on nearest visible allied castle
+- move toward enemycastle0
+
+
+PROPHET ALGO:
+- calculate enemycastle0 based on visible allied castle
+- listen for broadcasts, if the coord != any existing enemy castle,
+    add to list of enemy castles AND broadcast that coord, range 3
+- move toward allied pilgrim closest to target castle
+
+PILGRIM1 ALGO:
+- calculate enemycastle0 based on visible allied castle
+- listen for broadcasts, if the coord != any existing enemy castle,
+    add to list of enemy castles
+- move toward enemycastle 0
+
+PILGRIM2 ALGO:
+- enemycastle 2 will be broadcast from castle on spawn, listen for it
+- if its there, rebroadcast range 3
+- go to nearest fuel
+- mine
+- go to nearest castle/church
+- deposit
+
+
+*/
