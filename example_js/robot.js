@@ -8,7 +8,7 @@ var step = -1;
 class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
-        this.num_pilgrims = 0;
+        this.num_preachers = 0;
         this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
                              [-1,+0],          [+1,+0],
                              [-1,+1], [+0,+1], [+1,+1]]
@@ -19,6 +19,8 @@ class MyRobot extends BCAbstractRobot {
         this.maincastle = null
         this.num_castles = 1
         this.opposite_castle = []
+        this.nearest_enemy_castle = null
+        this.enemy_castles = []
     }
 
     in_bounds(x, y) {
@@ -129,6 +131,52 @@ class MyRobot extends BCAbstractRobot {
             find_sym(this.map)
         }
 
+        if (this.me.unit === SPECS.PREACHER){
+            // find the nearest allied castle
+            var units = this.getVisibleRobots()
+            var castle_coords = null
+            for (var i in units){
+                if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                    castle_coords = [units[i].x, units[i].y]     
+                }
+            }
+
+            // start populating the enemy castle list
+            if (this.enemy_castles.length == 0){
+                this.sym = find_sym(this.map)
+                var mirror_coord = this.me.y 
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.nearest_enemy_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.nearest_enemy_castle = [this.me.x, mirror_coord]
+                }
+                this.enemy_castles.push(this.nearest_enemy_castle)
+            }
+
+            // find the closest enemy castle
+            var closest_d = 1000
+            var path_to_enemy_castle = []
+            if (this.enemy_castles.length >= 1){
+                for (var i in this.enemy_castles){
+                    var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+                    if (path.length < closest_d){
+                        closest_d = path.length
+                        this.nearest_enemy_castle = this.enemy_castles[i]
+                        path_to_enemy_castle = path
+                    }
+                }
+            } 
+
+            // can the nearest allied castle still spawn units?
+            if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            }
+        }
+
         if (this.me.unit === SPECS.PILGRIM){
             // find corresponding castle
             //var nearby_units = this.getVisibleRobots()
@@ -187,7 +235,7 @@ class MyRobot extends BCAbstractRobot {
                 var best_dist = 1000
                 for (var i = x_start; i <= x_bound; i++){
                     for (var j = y_start; j <= y_bound; j++){
-                        if (this.fuel_map[j][i]){
+                        if (this.karbonite_map[j][i]){
                             var l = this.bfs(this.me.x, this.me.y, i, j).length
                             if (l != null && l < best_dist){
                                 best_dist = l
@@ -199,7 +247,7 @@ class MyRobot extends BCAbstractRobot {
                 this.num_castles = this.getVisibleRobots().length
 
                 // find corresponding enemy castle
-                var mirror_coord = this.me.y
+                var mirror_coord = this.me.y 
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
                 }
@@ -218,7 +266,7 @@ class MyRobot extends BCAbstractRobot {
                     if (units[i].id != this.me.id){
                         if (units[i].castle_talk == 0){
                             i_am_last = false
-                        } else if (units[i].castle_talk < best_dist) {
+                        } else if (units[i].castle_talk <= best_dist) {
                             i_am_best = false
                             this.maincastle = false
                         }                
@@ -231,11 +279,7 @@ class MyRobot extends BCAbstractRobot {
                     this.maincastle = true
                 }
             }
-            /*
-            0___|___0  0-8, 9   (w - w%2) - coord + (w%2 - 1)
-            0__}{__0   0-7, 8
 
-             */
             else if (step == 1){
                 if (this.maincastle == null){
                     var units = this.getVisibleRobots()
@@ -256,25 +300,39 @@ class MyRobot extends BCAbstractRobot {
                 if (!this.maincastle){
                     this.castleTalk(255)
                 }
-                return
-
-                if (this.num_pilgrims < 1 && this.maincastle){
-                    this.num_pilgrims ++;
-                    // find free tile to build pilgrim
-                    for (var i in this.random_ordering(this.mvmt_choices)){
-                        var choice = this.mvmt_choices[i];
-                        var x = this.me.x + choice[0];
-                        var y = this.me.y + choice[1];
-                        if (this.traversable(x, y, this.getVisibleRobotMap())){
-                            this.log("Build PILGRIM at " + (x) + ", " + (y));
-                            return this.buildUnit(SPECS.PILGRIM, choice[0], choice[1]);
-                        }
+                if (this.maincastle){
+                    if (this.num_preachers < 1 && this.maincastle){
+                        this.num_preachers ++;
+                        // find free tile to build preacher
+                        this.log("built preacher")
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
                 }
-                this.log(this.maincastle)
+                return
+            }
+            else if (step == 2){
+                if (this.maincastle){
+                    this.num_preachers ++
+                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                }
             }
             return
         }
+    }
+    is_adjacent(x1, y1, x2, y2){
+        return Math.abs(x1-x2) < 2 && Math.abs(y1-y2) < 2
+    }
+
+    find_free_adjacent_tile(x, y){
+        for (var i in this.random_ordering(this.mvmt_choices)){
+            var choice = this.mvmt_choices[i];
+            var x = this.me.x + choice[0];
+            var y = this.me.y + choice[1];
+            if (this.traversable(x, y, this.getVisibleRobotMap())){
+                return choice
+            }
+        }
+        return null
     }
 }
 
