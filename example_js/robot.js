@@ -16,7 +16,7 @@ class MyRobot extends BCAbstractRobot {
         this.W = null
         this.H = null
         this.sym = null
-        this.maincastle = true
+        this.maincastle = null
         this.num_castles = 1
         this.opposite_castle = []
     }
@@ -189,15 +189,16 @@ class MyRobot extends BCAbstractRobot {
                     for (var j = y_start; j <= y_bound; j++){
                         if (this.fuel_map[j][i]){
                             var l = this.bfs(this.me.x, this.me.y, i, j).length
-                            if (l < best_dist){
+                            if (l != null && l < best_dist){
                                 best_dist = l
                             }
                         }
                     }
                 }
                 this.castleTalk(Math.min(255, best_dist))
-                this.log((best_dist))
                 this.num_castles = this.getVisibleRobots().length
+
+                // find corresponding enemy castle
                 var mirror_coord = this.me.y
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
@@ -208,7 +209,27 @@ class MyRobot extends BCAbstractRobot {
                 } else {
                     this.opposite_castle = [this.me.x, mirror_coord]
                 }
-                this.log(this.opposite_castle)
+
+                // check if other castles have published
+                var units = this.getVisibleRobots()
+                var i_am_last = true
+                var i_am_best = true
+                for (var i in units){
+                    if (units[i].id != this.me.id){
+                        if (units[i].castle_talk == 0){
+                            i_am_last = false
+                        } else if (units[i].castle_talk < best_dist) {
+                            i_am_best = false
+                            this.maincastle = false
+                        }                
+                    }
+                }
+                //this.log(i_am_last)
+                //this.log(i_am_best)
+
+                if (i_am_last && i_am_best){
+                    this.maincastle = true
+                }
             }
             /*
             0___|___0  0-8, 9   (w - w%2) - coord + (w%2 - 1)
@@ -216,18 +237,26 @@ class MyRobot extends BCAbstractRobot {
 
              */
             else if (step == 1){
-                var units = this.getVisibleRobots()
-                if (units.length > this.num_castles){
-                    this.maincastle = false
-                }
-
-                for (var i in units){
-                    if (units[i].castle_talk < this.me.castle_talk && units[i].id != this.me.id) {
-                        this.log((this.me.castle_talk))
-                        this.log((units[i].castle_talk))
+                if (this.maincastle == null){
+                    var units = this.getVisibleRobots()
+                    if (units.length > this.num_castles){
                         this.maincastle = false
                     }
+
+                    for (var i in units){
+                        if (units[i].castle_talk < this.me.castle_talk && units[i].id != this.me.id) {
+                            this.maincastle = false
+                        }
+                    }
+
+                    if (this.maincastle == null){
+                        this.maincastle = true
+                    }
                 }
+                if (!this.maincastle){
+                    this.castleTalk(255)
+                }
+                return
 
                 if (this.num_pilgrims < 1 && this.maincastle){
                     this.num_pilgrims ++;
@@ -242,7 +271,6 @@ class MyRobot extends BCAbstractRobot {
                         }
                     }
                 }
-
                 this.log(this.maincastle)
             }
             return
