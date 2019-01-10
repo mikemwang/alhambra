@@ -16,7 +16,9 @@ class MyRobot extends BCAbstractRobot {
         this.W = null
         this.H = null
         this.sym = null
-        this.first_castle = true
+        this.maincastle = true
+        this.num_castles = 1
+        this.opposite_castle = []
     }
 
     in_bounds(x, y) {
@@ -183,47 +185,68 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
                 var best_dist = 1000
-                var best_path = []
                 for (var i = x_start; i <= x_bound; i++){
                     for (var j = y_start; j <= y_bound; j++){
                         if (this.fuel_map[j][i]){
-                            var l = this.bfs(this.me.x, this.me.y, i, j)
-                            if (l.length < best_dist){
-                                best_dist = l.length
-                                best_path = l.slice()
+                            var l = this.bfs(this.me.x, this.me.y, i, j).length
+                            if (l < best_dist){
+                                best_dist = l
                             }
                         }
                     }
                 }
                 this.castleTalk(Math.min(255, best_dist))
+                this.log((best_dist))
+                this.num_castles = this.getVisibleRobots().length
+                var mirror_coord = this.me.y
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.opposite_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.opposite_castle = [this.me.x, mirror_coord]
+                }
+                this.log(this.opposite_castle)
             }
-            return
-            if (step == 0 && this.getVisibleRobots().length > 3){
-                this.first_castle = false
-            }
-            if (this.num_pilgrims < 1 && this.first_castle){
+            /*
+            0___|___0  0-8, 9   (w - w%2) - coord + (w%2 - 1)
+            0__}{__0   0-7, 8
+
+             */
+            else if (step == 1){
                 var units = this.getVisibleRobots()
-                for (var unit in units){
-                    this.log(units[unit])
-                    if (units[unit].unit === SPECS.CASTLE){
-                        this.log("castle at " + (units[unit].x) + " ," + (units[unit].y))
+                if (units.length > this.num_castles){
+                    this.maincastle = false
+                }
+
+                for (var i in units){
+                    if (units[i].castle_talk < this.me.castle_talk && units[i].id != this.me.id) {
+                        this.log((this.me.castle_talk))
+                        this.log((units[i].castle_talk))
+                        this.maincastle = false
                     }
                 }
-                this.num_pilgrims ++;
-                // find free tile to build pilgrim
-                for (var i in this.mvmt_choices){
-                    var choice = this.mvmt_choices[i];
-                    var x = this.me.x + choice[0];
-                    var y = this.me.y + choice[1];
-                    if (x < this.W && y < this.H){
-                        if (this.map[y][x]){
+
+                if (this.num_pilgrims < 1 && this.maincastle){
+                    this.num_pilgrims ++;
+                    // find free tile to build pilgrim
+                    for (var i in this.random_ordering(this.mvmt_choices)){
+                        var choice = this.mvmt_choices[i];
+                        var x = this.me.x + choice[0];
+                        var y = this.me.y + choice[1];
+                        if (this.traversable(x, y, this.getVisibleRobotMap())){
                             this.log("Build PILGRIM at " + (x) + ", " + (y));
                             return this.buildUnit(SPECS.PILGRIM, choice[0], choice[1]);
                         }
                     }
                 }
+
+                this.log(this.maincastle)
             }
-       }
+            return
+        }
     }
 }
 
