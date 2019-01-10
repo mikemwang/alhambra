@@ -119,7 +119,11 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.PILGRIM){
             //return this.move_toward_location(0,H);
-            return this.move(...this.bfs(this.W-1,this.H-1))
+		if (this.bfs !== null) {
+			this.log("doing a bfs");
+            		return this.move(...this.bfs(this.W-1,this.H-1))
+		}
+
             // move toward nearest fuel
             // mine
             // move toward nearest castle/church
