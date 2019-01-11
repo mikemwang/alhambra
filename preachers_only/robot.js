@@ -320,8 +320,9 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
+            */
         }
-*/        // find nearest fuel
+        // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
                 this.sym = find_sym(this.map)                
