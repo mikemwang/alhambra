@@ -136,10 +136,30 @@ class MyRobot extends BCAbstractRobot {
             var units = this.getVisibleRobots()
             var castle_coords = null
             for (var i in units){
+                if (units[i].team != this.me.team){
+                    var enemy_unit = [units[i].x, units[i].y]
+                    var atk = [[0,0]]
+                    atk.push(this.mvmt_choices.slice())
+                    var friendly_fire = false
+                    for (var a in atk){
+                        for (var j in units){
+                            if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                friendly_fire = true
+                                break
+                            }
+                        }
+                        if (!friendly_fire){
+                            enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                        }
+                        return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
+                    }
+                }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
             }
+
+
 
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
@@ -173,6 +193,7 @@ class MyRobot extends BCAbstractRobot {
 
             // can the nearest allied castle still spawn units?
             if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+                // if not, get the fuck out of the way
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             }
         }
