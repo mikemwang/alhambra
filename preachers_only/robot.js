@@ -162,7 +162,7 @@ class MyRobot extends BCAbstractRobot {
             }
 
             // start populating the enemy castle list
-            if (this.enemy_castles.length <= 3){
+            if (this.enemy_castles.length == 0){
                 this.sym = find_sym(this.map)
                 var mirror_coord = this.me.y 
                 if (this.sym == 'y'){
@@ -190,7 +190,8 @@ class MyRobot extends BCAbstractRobot {
                         this.nearest_enemy_castle = this.enemy_castles[i]
                         path_to_enemy_castle = path
                     } else if (path == null) {
-                        enemy_castles = enemy_castles.slice(1,enemy_castles.length)
+                        //DO THIS AFTER ENEMY CASTLES CONTAINS MULTIPLE CASTLE LOCATIONS
+                        //enemy_castles = enemy_castles.slice(1,enemy_castles.length)
                     }
                 }
             } 
@@ -285,11 +286,54 @@ class MyRobot extends BCAbstractRobot {
             //        }
             //    }
             //}
-            var path = this.bfs(this.me.x, this.me.y, this.W-1, this.H-1)
-            if (path != null){
-                return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+           //// PATH TEST
+            ////var path = this.bfs(this.me.x, this.me.y, 32, 38, true) // 118
+            ////var path = this.bfs(this.me.x, this.me.y, 33, 50, true) // 1001
+            //var path = this.bfs(this.me.x, this.me.y, 3, 44, true) // 183
+            //if (path != null){
+            //    return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
+            //}
+            //return
+            // PATH TEST
+            var units = this.getVisibleRobots()
+            if (this.nearest_karb == null){
+                for (var i in units){
+                    if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
+                        this.nearest_allied_castle = [units[i].x, units[i].y]
+                        var parsestring = units[i].signal.toString(2)
+                        if (parsestring.slice(0,4) == "1000"){
+                            var kx = parsestring.slice(4,10)
+                            var ky = parsestring.slice(10,16)
+                            this.nearest_karb = [parseInt(kx,2), parseInt(ky,2)]
+                        }
+                    }
+                }
             }
-            // move toward nearest fuel
+
+            if (this.me.karbonite < 20){
+                if (this.karbonite_map[this.me.y][this.me.x]){
+                    return this.mine()
+                }
+                var path = this.bfs(this.me.x, this.me.y, ...this.nearest_karb, true)
+                if (path != null){
+                    if(this.traversable(...path[0], this.getVisibleRobotMap())){
+                        return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+                    }
+                }
+            }
+
+            var to_castle = this.bfs(this.me.x, this.me.y, ...this.nearest_allied_castle, true)
+            if (this.me.karbonite == 20){
+                if (this.is_adjacent(this.me.x, this.me.y, ...this.nearest_allied_castle)){
+                    return this.give(this.nearest_allied_castle[0]-this.me.x, this.nearest_allied_castle[1]-this.me.y, 20, 0)
+                }
+                else {
+                    if (to_castle != null){
+                        return this.move(to_castle[0][0]-this.me.x, to_castle[0][1]-this.me.y)
+                    }
+                }
+            }
+        }e toward nearest fuel
             // mine
             // move toward nearest castle/church
             // deposit
@@ -399,6 +443,9 @@ class MyRobot extends BCAbstractRobot {
                         // find free tile to build preacher
                         this.log("built preacher")
                         return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    } else if (this.num_pilgrims < 1 && this.maincastle) {
+                        this.log("built pilgrim")
+                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
                 }
                 return
