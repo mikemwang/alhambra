@@ -123,6 +123,7 @@ class MyRobot extends BCAbstractRobot {
 			this.log("doing a bfs");
             		return this.move(...this.bfs(this.W-1,this.H-1))
 		}
+		this.log("bfs failed");
 
             // move toward nearest fuel
             // mine
