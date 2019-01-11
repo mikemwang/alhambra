@@ -282,7 +282,7 @@ class MyRobot extends BCAbstractRobot {
             //}
             //return
             // PATH TEST
-            var units = this.getVisibleRobots()
+/*            var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
                     if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
@@ -321,7 +321,7 @@ class MyRobot extends BCAbstractRobot {
                 }
             }
         }
-        // find nearest fuel
+*/        // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
                 this.sym = find_sym(this.map)                
