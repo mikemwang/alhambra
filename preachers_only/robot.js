@@ -273,8 +273,8 @@ class MyRobot extends BCAbstractRobot {
             }
         }
         if (this.me.unit === SPECS.PILGRIM){
-
-            var units = this.getVisibleRobots()
+            this.log("pilgrim not doing anything")
+/*            var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
                     if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
@@ -312,7 +312,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-
+*/
         }
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
@@ -428,7 +428,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                     else if(this.fuel >= 50 && this.karbonite >= 10) {
                         this.num_pilgrims ++
-                        return tihs.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
                     }
                 }
             }
