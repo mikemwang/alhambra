@@ -352,6 +352,8 @@ class MyRobot extends BCAbstractRobot {
         }
         return null
     }
+
+   
 }
 
 function find_sym(map){
