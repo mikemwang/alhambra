@@ -273,20 +273,7 @@ class MyRobot extends BCAbstractRobot {
             }
         }
         if (this.me.unit === SPECS.PILGRIM){
-            // find corresponding castle
-            //var nearby_units = this.getVisibleRobots()
-            //for (var i in nearby_units){
-            //    if (nearby_units[i].unit == SPEC.CASTLE) {
-            //        var castlex = nearby_units[i].x
-            //        var castley = nearby_units[i].y
-            //        var otherx = 0
-            //        var othery = 0
-            //        if (this.sym == 'x'){
-            //            
-            //        }
-            //    }
-            //}
-           //// PATH TEST
+            //// PATH TEST
             ////var path = this.bfs(this.me.x, this.me.y, 32, 38, true) // 118
             ////var path = this.bfs(this.me.x, this.me.y, 33, 50, true) // 1001
             //var path = this.bfs(this.me.x, this.me.y, 3, 44, true) // 183
@@ -333,17 +320,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-        }e toward nearest fuel
-            // mine
-            // move toward nearest castle/church
-            // deposit
-
-            // move toward nearest karbonite
-            // mine
-            // move to castle/church
-            // deposit
         }
-
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
