@@ -182,8 +182,10 @@ class MyRobot extends BCAbstractRobot {
             var path_to_enemy_castle = []
             if (this.enemy_castles.length >= 1){
                 for (var i in this.enemy_castles){
+                    //this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
                     var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
-                    if (path.length < closest_d){
+                    //this.log("THIS IS MY PATH: " + path)
+                    if (path !== null && path.length < closest_d){
                         closest_d = path.length
                         this.nearest_enemy_castle = this.enemy_castles[i]
                         path_to_enemy_castle = path
@@ -193,7 +195,14 @@ class MyRobot extends BCAbstractRobot {
             // can the nearest allied castle still spawn units?
             //if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
             // move to enemy castle
-            return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+
+            if(path!== null){
+                //this.log ("I AM MOVING THIS MUCH: " +  (path_to_enemy_castle[0][0] - this.me.x) + " " + (path_to_enemy_castle[0][1] - this.me.y))
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            } else {
+                //this.log("NOT MOVING BC KILLED CASTLE ALREADY")
+            }
+    
             //}
         }
         if (this.me.unit === SPECS.PROPHET){
