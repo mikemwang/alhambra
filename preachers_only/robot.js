@@ -180,11 +180,11 @@ class MyRobot extends BCAbstractRobot {
             // find the closest enemy castle
             var closest_d = 1000
             var path_to_enemy_castle = []
-            if (this.enemy_castles.length >= 1){
+            if (this.enemy_castles.length == 0){
                 for (var i in this.enemy_castles){
-                    this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
+                    //this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
                     var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
-                    this.log("THIS IS MY PATH: " + path)
+                    //this.log("THIS IS MY PATH: " + path)
                     if (path !== null && path.length < closest_d){
                         closest_d = path.length
                         this.nearest_enemy_castle = this.enemy_castles[i]
@@ -200,10 +200,10 @@ class MyRobot extends BCAbstractRobot {
             // move to enemy castle
 
             if(path!== null){
-                this.log ("I AM MOVING THIS MUCH: " +  (path_to_enemy_castle[0][0] - this.me.x) + " " + (path_to_enemy_castle[0][1] - this.me.y))
+                //this.log ("I AM MOVING THIS MUCH: " +  (path_to_enemy_castle[0][0] - this.me.x) + " " + (path_to_enemy_castle[0][1] - this.me.y))
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             } else {
-                this.log("NOT MOVING BC KILLED CASTLE ALREADY")
+                //this.log("NOT MOVING BC KILLED CASTLE ALREADY")
             }
     
             //}
