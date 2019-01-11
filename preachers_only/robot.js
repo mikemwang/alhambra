@@ -282,7 +282,7 @@ class MyRobot extends BCAbstractRobot {
             //}
             //return
             // PATH TEST
-/*            var units = this.getVisibleRobots()
+            var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
                     if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
@@ -302,9 +302,9 @@ class MyRobot extends BCAbstractRobot {
                     return this.mine()
                 }
                 var path = this.bfs(this.me.x, this.me.y, ...this.nearest_karb, true)
-                if (path != null){
+                if (path !== null){
                     if(this.traversable(...path[0], this.getVisibleRobotMap())){
-                        return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+                        return this.move((path[0][0]-this.me.x), (path[0][1]-this.me.y)
                     }
                 }
             }
@@ -312,15 +312,15 @@ class MyRobot extends BCAbstractRobot {
             var to_castle = this.bfs(this.me.x, this.me.y, ...this.nearest_allied_castle, true)
             if (this.me.karbonite == 20){
                 if (this.is_adjacent(this.me.x, this.me.y, ...this.nearest_allied_castle)){
-                    return this.give(this.nearest_allied_castle[0]-this.me.x, this.nearest_allied_castle[1]-this.me.y, 20, 0)
+                    return this.give((this.nearest_allied_castle[0]-this.me.x), (this.nearest_allied_castle[1]-this.me.y), 20, 0)
                 }
                 else {
-                    if (to_castle != null){
-                        return this.move(to_castle[0][0]-this.me.x, to_castle[0][1]-this.me.y)
+                    if (to_castle !== null){
+                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y))
                     }
                 }
             }
-            */
+
         }
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
