@@ -304,7 +304,7 @@ class MyRobot extends BCAbstractRobot {
                 var path = this.bfs(this.me.x, this.me.y, ...this.nearest_karb, true)
                 if (path !== null){
                     if(this.traversable(...path[0], this.getVisibleRobotMap())){
-                        return this.move((path[0][0]-this.me.x), (path[0][1]-this.me.y)
+                        return this.move((path[0][0]-this.me.x), (path[0][1]-this.me.y))
                     }
                 }
             }
