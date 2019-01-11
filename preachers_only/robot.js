@@ -408,12 +408,12 @@ class MyRobot extends BCAbstractRobot {
                     this.castleTalk(255)
                 }
                 if (this.maincastle){
-                    if (this.num_preachers < 1 && this.maincastle){
+                    if (this.num_preachers < 1 && this.maincastle && this.fuel >= 50 && this.karbonite >= 30){
                         this.num_preachers ++;
                         // find free tile to build preacher
                         this.log("built preacher")
                         return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                    } else if (this.num_pilgrims < 1 && this.maincastle) {
+                    } else if (this.num_pilgrims < 1 && this.maincastle && this.fuel >= 50 && this.karbonite >= 10) {
                         this.log("built pilgrim")
                         return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
@@ -422,8 +422,14 @@ class MyRobot extends BCAbstractRobot {
             }
             else {
                 if (this.maincastle){
-                    this.num_preachers ++
-                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    if(this.fuel >= 50 && this.karbonite >= 30) {
+                        this.num_preachers ++
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    }
+                    else if(this.fuel >= 50 && this.karbonite >= 10) {
+                        this.num_pilgrims ++
+                        return tihs.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
+                    }
                 }
             }
             //else {
