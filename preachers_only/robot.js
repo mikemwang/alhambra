@@ -273,15 +273,7 @@ class MyRobot extends BCAbstractRobot {
             }
         }
         if (this.me.unit === SPECS.PILGRIM){
-            //// PATH TEST
-            ////var path = this.bfs(this.me.x, this.me.y, 32, 38, true) // 118
-            ////var path = this.bfs(this.me.x, this.me.y, 33, 50, true) // 1001
-            //var path = this.bfs(this.me.x, this.me.y, 3, 44, true) // 183
-            //if (path != null){
-            //    return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
-            //}
-            //return
-            // PATH TEST
+
             var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
@@ -296,7 +288,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-
+            
             if (this.me.karbonite < 20){
                 if (this.karbonite_map[this.me.y][this.me.x]){
                     return this.mine()
@@ -316,7 +308,7 @@ class MyRobot extends BCAbstractRobot {
                 }
                 else {
                     if (to_castle !== null){
-                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y))
+                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y)
                     }
                 }
             }
