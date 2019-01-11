@@ -150,16 +150,15 @@ class MyRobot extends BCAbstractRobot {
                         }
                         if (!friendly_fire){
                             enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                            break
                         }
-                        return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
                     }
+                    return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
             }
-
-
 
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
@@ -190,7 +189,6 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             } 
-
             // can the nearest allied castle still spawn units?
             if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
                 // if not, get the fuck out of the way
@@ -212,7 +210,6 @@ class MyRobot extends BCAbstractRobot {
             //        }
             //    }
             //}
-
             var path = this.bfs(this.me.x, this.me.y, this.W-1, this.H-1)
             if (path != null){
                 return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
