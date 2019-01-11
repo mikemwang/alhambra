@@ -6,11 +6,6 @@ var step = -1;
 class MyRobot extends BCAbstractRobot {
     turn() {
         step++;
-        // var pmap = get_pmap(this.map)
-        // for (var i = 0; i < pmap.length; i++) {
-        //   this.log(pmap[i])
-        // }
-//////////////////////////////////////////////////////////////////////////
         var pmap = Array.apply(null, Array(this.map.length))
         var row = pmap.map(function (x, i) { return 0 });
         var pmap = pmap.map(function (x, i) { return row });
