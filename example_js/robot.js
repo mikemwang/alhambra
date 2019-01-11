@@ -5,23 +5,29 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 var built = false;
 var step = -1;
 
-
 class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
-        this.num_pilgrims = 0;
+        this.num_preachers = 0;
         this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
                              [-1,+0],          [+1,+0],
                              [-1,+1], [+0,+1], [+1,+1]]
         this.used_map = null
         this.W = null
         this.H = null
+        this.sym = null
+        this.maincastle = null
+        this.num_castles = 1
+        this.opposite_castle = []
+        this.nearest_enemy_castle = null
+        this.enemy_castles = []
     }
 
     in_bounds(x, y) {
         // check if a tile is in bounds
         return (x >= 0 && x < this.W && y >= 0 && y < this.H)
     }
+
 
     traversable(x, y, visible_robot_map) {
         // check if a square is in bounds, not terrain, and not occupied
@@ -48,17 +54,22 @@ class MyRobot extends BCAbstractRobot {
         return array;
     }
 
-    bfs(x, y) {
+
+    bfs(startx, starty, x, y) {
         /*
-        args: in a goal x and y
-        returns: the next point to which the robot should move, null if no path
+        args: a start location startx starty, in a goal x and y
+        returns: a list of waypoints, with index 0 being the next point to go
 
         ***notes
-        traffic-jam behavior: if the way to the goal, or the goal itself, is 
+        traffic-jam behavior: if the way to the goal, or the goal itself, is
         blocked by another robot, this robot will stop
         */
 
-        var paths = [[[this.me.x, this.me.y]]]
+        if (x == startx && y == starty){
+            return null
+        }
+
+        var paths = [[[startx, starty]]]
 
         if (this.used_map == null) {
             this.used_map = []
@@ -76,7 +87,7 @@ class MyRobot extends BCAbstractRobot {
             }
         }
 
-        this.used_map[this.me.y][this.me.x] = true
+        this.used_map[starty][startx] = true
         var visible_robot_map = this.getVisibleRobotMap()
 
         while (paths.length > 0){
@@ -93,7 +104,7 @@ class MyRobot extends BCAbstractRobot {
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
                             if (newx == x && newy == y) {
-                                return [newpath[1][0] - this.me.x, newpath[1][1] - this.me.y] // since newpath[0] is the robot's starting point
+                                return newpath.slice(1)
                             }
                             new_paths.push(newpath)
                         }
@@ -101,10 +112,9 @@ class MyRobot extends BCAbstractRobot {
                 }
             }
             if (new_paths.length > 0) {
-                paths = new_paths.slice(0, new_paths.length)
+                paths = new_paths.slice()
             }
         }
-        this.log("no path found")
         return null
     }
 
@@ -117,9 +127,93 @@ class MyRobot extends BCAbstractRobot {
             this.W = this.map[0].length;
         }
 
+        if (this.sym == null){
+            find_sym(this.map)
+        }
+
+        if (this.me.unit === SPECS.PREACHER){
+            // find the nearest allied castle
+            var units = this.getVisibleRobots()
+            var castle_coords = null
+            for (var i in units){
+                if (units[i].team != this.me.team){
+                    var enemy_unit = [units[i].x, units[i].y]
+                    var atk = [[0,0]]
+                    atk.push(this.mvmt_choices.slice())
+                    var friendly_fire = false
+                    for (var a in atk){
+                        for (var j in units){
+                            if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                friendly_fire = true
+                                break
+                            }
+                        }
+                        if (!friendly_fire){
+                            enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                            break
+                        }
+                    }
+                    return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
+                }
+                if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                    castle_coords = [units[i].x, units[i].y]     
+                }
+            }
+
+            // start populating the enemy castle list
+            if (this.enemy_castles.length == 0){
+                this.sym = find_sym(this.map)
+                var mirror_coord = this.me.y 
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.nearest_enemy_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.nearest_enemy_castle = [this.me.x, mirror_coord]
+                }
+                this.enemy_castles.push(this.nearest_enemy_castle)
+            }
+
+            // find the closest enemy castle
+            var closest_d = 1000
+            var path_to_enemy_castle = []
+            if (this.enemy_castles.length >= 1){
+                for (var i in this.enemy_castles){
+                    var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+                    if (path.length < closest_d){
+                        closest_d = path.length
+                        this.nearest_enemy_castle = this.enemy_castles[i]
+                        path_to_enemy_castle = path
+                    }
+                }
+            } 
+            // can the nearest allied castle still spawn units?
+            if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+                // if not, get the fuck out of the way
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            }
+        }
+
         if (this.me.unit === SPECS.PILGRIM){
-            //return this.move_toward_location(0,H);
-            return this.move(...this.bfs(this.W-1,this.H-1))
+            // find corresponding castle
+            //var nearby_units = this.getVisibleRobots()
+            //for (var i in nearby_units){
+            //    if (nearby_units[i].unit == SPEC.CASTLE) {
+            //        var castlex = nearby_units[i].x
+            //        var castley = nearby_units[i].y
+            //        var otherx = 0
+            //        var othery = 0
+            //        if (this.sym == 'x'){
+            //            
+            //        }
+            //    }
+            //}
+            var path = this.bfs(this.me.x, this.me.y, this.W-1, this.H-1)
+            if (path != null){
+                return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+            }
             // move toward nearest fuel
             // mine
             // move toward nearest castle/church
@@ -131,24 +225,240 @@ class MyRobot extends BCAbstractRobot {
             // deposit
         }
 
+        // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
-            if (this.num_pilgrims < 1){
-                this.num_pilgrims ++;
-                // find free tile to build pilgrim
-                for (var i in this.mvmt_choices){
-                    var choice = this.mvmt_choices[i];
-                    var x = this.me.x + choice[0];
-                    var y = this.me.y + choice[1];
-                    if (x < this.W && y < this.H){
-                        if (this.map[y][x]){
-                            this.log("Build PILGRIM at " + (x) + ", " + (y));
-                            return this.buildUnit(SPECS.PILGRIM, choice[0], choice[1]);
+            if (step == 0){
+                this.sym = find_sym(this.map)                
+                var x_start = 0
+                var x_bound = this.W -1
+                var y_start = 0
+                var y_bound = this.H -1
+                if (this.sym == 'x'){
+                    y_bound = Math.floor(this.H*0.5) + this.H%2
+                    if (this.me.y <= y_bound){
+                        y_start = 0
+                    } else{
+                        y_start = y_bound
+                        y_bound = this.H -1
+                    }
+                } else {
+                    x_bound = Math.floor(this.W*0.5) + this.W%2
+                    if (this.me.x <= x_bound){
+                        x_start = 0
+                    } else{
+                        x_start = x_bound
+                        x_bound = this.W -1
+                    }
+                }
+                var best_dist = 1000
+                for (var i = x_start; i <= x_bound; i++){
+                    for (var j = y_start; j <= y_bound; j++){
+                        if (this.karbonite_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j).length
+                            if (l != null && l < best_dist){
+                                best_dist = l
+                            }
                         }
                     }
                 }
+                this.castleTalk(Math.min(255, best_dist))
+                this.num_castles = this.getVisibleRobots().length
+
+                // find corresponding enemy castle
+                var mirror_coord = this.me.y 
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.opposite_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.opposite_castle = [this.me.x, mirror_coord]
+                }
+
+                // check if other castles have published
+                var units = this.getVisibleRobots()
+                var i_am_last = true
+                var i_am_best = true
+                for (var i in units){
+                    if (units[i].id != this.me.id){
+                        if (units[i].castle_talk == 0){
+                            i_am_last = false
+                        } else if (units[i].castle_talk <= best_dist) {
+                            i_am_best = false
+                            this.maincastle = false
+                        }                
+                    }
+                }
+                //this.log(i_am_last)
+                //this.log(i_am_best)
+
+                if (i_am_last && i_am_best){
+                    this.maincastle = true
+                }
             }
-       }
+
+            else if (step == 1){
+                if (this.maincastle == null){
+                    var units = this.getVisibleRobots()
+                    if (units.length > this.num_castles){
+                        this.maincastle = false
+                    }
+
+                    for (var i in units){
+                        if (units[i].castle_talk < this.me.castle_talk && units[i].id != this.me.id) {
+                            this.maincastle = false
+                        }
+                    }
+
+                    if (this.maincastle == null){
+                        this.maincastle = true
+                    }
+                }
+                if (!this.maincastle){
+                    this.castleTalk(255)
+                }
+                if (this.maincastle){
+                    if (this.num_preachers < 1 && this.maincastle){
+                        this.num_preachers ++;
+                        // find free tile to build preacher
+                        this.log("built preacher")
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    }
+                }
+                return
+            }
+            else if (step == 2){
+                if (this.maincastle){
+                    this.num_preachers ++
+                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                }
+            }
+            return
+        }
     }
+    is_adjacent(x1, y1, x2, y2){
+        return Math.abs(x1-x2) < 2 && Math.abs(y1-y2) < 2
+    }
+
+    find_free_adjacent_tile(x, y){
+        for (var i in this.random_ordering(this.mvmt_choices)){
+            var choice = this.mvmt_choices[i];
+            var x = this.me.x + choice[0];
+            var y = this.me.y + choice[1];
+            if (this.traversable(x, y, this.getVisibleRobotMap())){
+                return choice
+            }
+        }
+        return null
+    }
+
+   
 }
 
+function find_sym(map){
+    for (var i = 0; i < map.length; i++){
+      for (var j = 0; j < map.length; j++){
+        var ii = map.length - 1 - i
+        if (map[i][j] !== map[ii][j]){
+          return 'y'
+        }
+      }
+    }
+    return 'x'
+ }
+
 var robot = new MyRobot();
+
+/*
+round 0
+ALL CASTLES
+- castletalk nearest fuel bfs path dist
+- count the castles
+
+round 1
+ALL CASTLES
+- if there is a castle with closer fuel:
+- set MAINCASTLE false
+- find location of corresponding enemy castle
+- castletalk enemy castle X 
+
+- else if visibleunits.length > number of castles recorded last turn:
+- set MAINCASTLE false
+- find location of corresponding enemy castle
+- castletalk enemy castle X 
+
+- else
+- set MAINCASTLE true
+- build pilgrim
+
+PILGRIM1:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn 2
+OTHERCASTLES:
+- castletalk(enemy castle Y)
+
+MAINCASTLE:
+- read enemy castle Xs on castletalk
+- build PROHET1
+
+PILGRIM1:
+- move toward enemy castle 0
+
+PROPHET1:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn3:
+MAINCASTLE:
+- read enemy castle Ys on castletalk
+- calculate enemy castle positions
+- broadcast enemy castle 1 position, range 1
+- build PROHET2
+
+PILGRIM1, PROPHET1:
+- move toward enemycastle0
+
+PROPHET2:
+- calculate enemy castle 0 based on nearest visible allied castle
+- move toward enemy castle 0
+
+turn4:
+MAINCASTLE:
+- broadcast enemy castle 2 position, range 1
+- build PROPHET3
+
+PILGRIM1, PROPHET1, PROPHET2
+- move toward enemycastle0
+
+PROPHET3:
+- read enemycastle1 from castle broadcast
+- broadcast enemycastle1, range 3
+- calculate enemycastle0 based on nearest visible allied castle
+- move toward enemycastle0
+
+
+PROPHET ALGO:
+- calculate enemycastle0 based on visible allied castle
+- listen for broadcasts, if the coord != any existing enemy castle,
+    add to list of enemy castles AND broadcast that coord, range 3
+- move toward allied pilgrim closest to target castle
+
+PILGRIM1 ALGO:
+- calculate enemycastle0 based on visible allied castle
+- listen for broadcasts, if the coord != any existing enemy castle,
+    add to list of enemy castles
+- move toward enemycastle 0
+
+PILGRIM2 ALGO:
+- enemycastle 2 will be broadcast from castle on spawn, listen for it
+- if its there, rebroadcast range 3
+- go to nearest fuel
+- mine
+- go to nearest castle/church
+- deposit
+
+
+*/
