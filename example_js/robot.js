@@ -195,7 +195,70 @@ class MyRobot extends BCAbstractRobot {
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             }
         }
+        if (this.me.unit === SPECS.PROPHET){
+            // find the nearest allied castle
+            var units = this.getVisibleRobots()
+            var castle_coords = null
+            for (var i in units){
+                if (units[i].team != this.me.team){
+                    var enemy_unit = [units[i].x, units[i].y]
+                    var atk = [[0,0]]
+                    atk.push(this.mvmt_choices.slice())
+                    var friendly_fire = false
+                    for (var a in atk){
+                        for (var j in units){
+                            if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                friendly_fire = true
+                                break
+                            }
+                        }
+                        if (!friendly_fire){
+                            enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                            break
+                        }
+                    }
+                    return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
+                }
+                if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                    castle_coords = [units[i].x, units[i].y]     
+                }
+            }
 
+            // start populating the enemy castle list
+            if (this.enemy_castles.length == 0){
+                this.sym = find_sym(this.map)
+                var mirror_coord = this.me.y 
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.nearest_enemy_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.nearest_enemy_castle = [this.me.x, mirror_coord]
+                }
+                this.enemy_castles.push(this.nearest_enemy_castle)
+            }
+
+            // find the closest enemy castle
+            var closest_d = 1000
+            var path_to_enemy_castle = []
+            if (this.enemy_castles.length >= 1){
+                for (var i in this.enemy_castles){
+                    var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+                    if (path.length < closest_d){
+                        closest_d = path.length
+                        this.nearest_enemy_castle = this.enemy_castles[i]
+                        path_to_enemy_castle = path
+                    }
+                }
+            } 
+            // can the nearest allied castle still spawn units?
+            if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+                // if not, get the fuck out of the way
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            }
+        }
         if (this.me.unit === SPECS.PILGRIM){
             // find corresponding castle
             //var nearby_units = this.getVisibleRobots()
@@ -323,7 +386,7 @@ class MyRobot extends BCAbstractRobot {
                         this.num_preachers ++;
                         // find free tile to build preacher
                         this.log("built preacher")
-                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
                 }
                 return
@@ -333,6 +396,9 @@ class MyRobot extends BCAbstractRobot {
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 }
+            }
+            else {
+                // find path length to carbonite, build that many (max 4) pilgrims
             }
             return
         }
@@ -352,8 +418,6 @@ class MyRobot extends BCAbstractRobot {
         }
         return null
     }
-
-   
 }
 
 function find_sym(map){
