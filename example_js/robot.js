@@ -153,7 +153,7 @@ class MyRobot extends BCAbstractRobot {
                             break
                         }
                     }
-                    return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
+                    return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
