@@ -429,6 +429,8 @@ class MyRobot extends BCAbstractRobot {
                     }
                     else if(this.fuel >= 50 && this.karbonite >= 10) {
                         this.num_pilgrims ++
+                        this.log("FUEL: " + this.fuel)
+                        this.log("KARBONITE: " + this.karbonite)
                         this.log("built pilgrim wahoo")
                         return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
                     }
