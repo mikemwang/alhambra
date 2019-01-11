@@ -288,7 +288,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-            
+
             if (this.me.karbonite < 20){
                 if (this.karbonite_map[this.me.y][this.me.x]){
                     return this.mine()
@@ -308,7 +308,7 @@ class MyRobot extends BCAbstractRobot {
                 }
                 else {
                     if (to_castle !== null){
-                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y)
+                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y))
                     }
                 }
             }
