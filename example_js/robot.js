@@ -1,6 +1,8 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
 
-// single castle seed: 983275
+// 1000: mine location
+// 1001: target ping
+// 1111: needs more space
 
 var built = false;
 var step = -1;
@@ -106,17 +108,6 @@ class MyRobot extends BCAbstractRobot {
                     if (cur_path.length == 1){
                         if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
                             if (!this.used_map[newy][newx]){
-                                var newpath = cur_path.slice(0, cur_path.length)
-                                newpath.push([newx, newy])
-                                if (newx == x && newy == y) {
-                                    return newpath.slice(1)
-                                }
-                                new_paths.push(newpath)
-                            }
-                        }
-                    } else {
-                        if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                            if (!this.used_map[newy][newx]){
                                 this.used_map[newy][newx] = true
                                 var newpath = cur_path.slice(0, cur_path.length)
                                 newpath.push([newx, newy])
@@ -126,7 +117,17 @@ class MyRobot extends BCAbstractRobot {
                                 new_paths.push(newpath)
                             }
                         }
-
+                    }
+                    else if (this.in_bounds(newx, newy) && this.map[newy][newx]){
+                        if (!this.used_map[newy][newx]){
+                            this.used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            if (newx == x && newy == y) {
+                                return newpath.slice(1)
+                            }
+                            new_paths.push(newpath)
+                        }
                     }
                 }
             }
@@ -152,6 +153,7 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.PREACHER){
             // find the nearest allied castle
+            var blocking = false
             var units = this.getVisibleRobots()
             var castle_coords = null
             for (var i in units){
@@ -177,6 +179,11 @@ class MyRobot extends BCAbstractRobot {
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
+                if (this.isRadioing(units[i])){
+                    if (units[i].signal.toString(2).slice(0,4) == "1111"){
+                        blocking = true
+                    }
+                }
             }
 
             // start populating the enemy castle list
@@ -207,25 +214,39 @@ class MyRobot extends BCAbstractRobot {
                         path_to_enemy_castle = path
                     }
                 }
-            } 
-            if (path_to_enemy_castle.length > 0){
-                // no adjacent to prevent splash
-                if (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+            }
+
+
+            // no adjacent to prevent splash
+            if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
+                if (path_to_enemy_castle.length > 0){
                     return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                } else {
+                    this.signal(parseInt("1111000000000000", 2), 4)
                 }
             }
             // make sure you're not on a karb
             if (this.karbonite_map[this.me.y][this.me.x]){
-                if (path.length == 0){
+                if (path_to_enemy_castle.length == 0){
                     var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
                     return this.move(...move)
                 }
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             }
+            // prevent traffic jams
+            //var cross = [[1,0],[0,1],[-1,0],[0,-1]]
+            //var visible_bots = this.getVisibleRobotMap()
+            //for (i in cross){
+            //    if (visible_bots[this.me.y+cross[i][1]][this.me.x+cross[i][0]]>0){
+            //        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            //    }
+            //}
         }
         if (this.me.unit === SPECS.PROPHET){
             // find the nearest allied castle
+            var blocking = false
             var units = this.getVisibleRobots()
+            var pilgrim_coords = null
             var castle_coords = null
             for (var i in units){
                 if (units[i].team != this.me.team){
@@ -235,6 +256,14 @@ class MyRobot extends BCAbstractRobot {
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
+                if (this.isRadioing(units[i])){
+                    if (units[i].signal.toString(2).slice(0,4) == "1111"){
+                        blocking = true
+                    }
+                }
+                if (units[i].unit == PILGRIM && units[i].team == this.me.team){
+                    pilgrim_coords = [units[i].x, units[i].y]
+                }
             }
 
             // start populating the enemy castle list
@@ -266,16 +295,18 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             } 
-
-            if (path_to_enemy_castle.length > 0){
-                // no adjacent to prevent splash
-                if (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+            // no adjacent to prevent splash
+            if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
+                if (path_to_enemy_castle.length > 0){
                     return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                } else {
+                    this.signal(parseInt("1111000000000000", 2), 4)
                 }
             }
+
             // make sure you're not on a karb
             if (this.karbonite_map[this.me.y][this.me.x]){
-                if (path.length == 0){
+                if (path_to_enemy_castle.length == 0){
                     var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
                     return this.move(...move)
                 }
@@ -329,6 +360,7 @@ class MyRobot extends BCAbstractRobot {
                     if (to_castle != null){
                         return this.move(to_castle[0][0]-this.me.x, to_castle[0][1]-this.me.y)
                     }
+                    this.signal(parseInt("1111000000000000", 2), 4)
                 }
             }
         }
@@ -428,9 +460,9 @@ class MyRobot extends BCAbstractRobot {
                 ///* PATH TESTING
                 if (this.maincastle){
                     if (this.num_preachers < 1 && this.maincastle){
-                        this.num_prophets ++;
+                        this.num_preachers ++;
                         // find free tile to build preacher
-                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
                 }
 
@@ -453,20 +485,29 @@ class MyRobot extends BCAbstractRobot {
 
             else if (step == 2){
                 if (this.maincastle){
-                    this.num_prophets ++
-                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    this.num_preachers ++
+                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 }
             }
 
             else if (step == 3){
                 if (this.maincastle){
-                    this.num_prophets ++
-                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    this.num_preachers ++
+                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 }
             }
             else {
                 //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
-                if (this.maincastle && this.num_pilgrims < 1){
+                if (!this.maincastle){
+                    return
+                }
+                this.log(this.num_prophets)
+                if (this.karbonite >= 25){
+                    this.num_prophets ++
+                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+
+                }
+                if (this.num_pilgrims < 1){
                     if (this.karbonite < 10){
                         return
                     }
