@@ -180,7 +180,7 @@ class MyRobot extends BCAbstractRobot {
             // find the closest enemy castle
             var closest_d = 1000
             var path_to_enemy_castle = []
-            if (this.enemy_castles.length == 0){
+            if (this.enemy_castles.length >= 1){
                 for (var i in this.enemy_castles){
                     //this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
                     var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
