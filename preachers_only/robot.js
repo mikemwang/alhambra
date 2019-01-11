@@ -444,8 +444,8 @@ function attack_priority(visible_bots){
         */
     var priority_list = []
     var priority_order = [0, 1, 5, 4,3,2] // castle, church, preacher, prophet, crusader, pilgrim
-    for (var i = 0; i < priority_order.length(); i++) {
-        for (var x = 0; x < visible_bots.length(); x++){
+    for (var i = 0; i < priority_order.length; i++) {
+        for (var x = 0; x < visible_bots.length; x++){
             if (visible_bots[x].unit == priority_order[i]) {
                 priority_list.push(visible_bots[x])
             }
