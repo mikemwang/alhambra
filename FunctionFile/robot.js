@@ -17,9 +17,12 @@ var step = -1;
 //is_adjacent(x1, y1, x2, y2) = returns if the tiles are next to each other
 //find_free_adjacent_tile(x, y) = returns the next free tile around x y 
 //determine_bounds(x_start, x_bound, y_start, y_bound) = for the castle to find its private variables
+
 //determine_nearest_karb(x_start, x_bound, y_start, y_bound) = straightforward
 //determine_opp_location(x,y,sym) = find the opposite location
-//
+
+//attack_priority = takes a list of visible robots and sorts them in priority order
+
 
 
 
@@ -268,6 +271,25 @@ class MyRobot extends BCAbstractRobot {
         if (this.sym == null){
             find_sym(this.map)
         }
+    }
+
+    attack_priority(visible_bots, order = [0, 1, 5, 4, 3, 2]){
+        /*
+            args: a list of visible robots, optional: list of priority order
+            returns: a list of visible robots in priority order
+
+            ***notes
+            default priority order is castle, church, preacher, prophet, crusader, pilgrim
+            */
+        var priority_list = []
+        for (var i = 0; i < order.length; i++) {
+            for (var x = 0; x < visible_bots.length; x++){
+                if (visible_bots[x].unit == order[i]) {
+                    priority_list.push(visible_bots[x])
+                }
+            }
+        }
+        return priority_list
     }
 
 
