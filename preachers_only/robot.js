@@ -24,6 +24,9 @@ class MyRobot extends BCAbstractRobot {
         this.origin_castle = null
         this.origin_castle_location = [0,0]
         this.starting_location = null
+        this.killed_enemy = false
+        this.homeless = false
+        this.at_home = false
     }
 
     in_bounds(x, y) {
@@ -58,7 +61,7 @@ class MyRobot extends BCAbstractRobot {
     }
 
 
-    bfs(startx, starty, x, y) {
+    bfs(startx, starty, x, y, ignore_goal=false) {
         /*
         args: a start location startx starty, in a goal x and y
         returns: a list of waypoints, with index 0 being the next point to go
@@ -101,7 +104,20 @@ class MyRobot extends BCAbstractRobot {
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
-                    if (this.traversable(newx, newy, visible_robot_map)){
+                    if (cur_path.length == 1){
+                        if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
+                            if (!this.used_map[newy][newx]){
+                                this.used_map[newy][newx] = true
+                                var newpath = cur_path.slice(0, cur_path.length)
+                                newpath.push([newx, newy])
+                                if (newx == x && newy == y) {
+                                    return newpath.slice(1)
+                                }
+                                new_paths.push(newpath)
+                            }
+                        }
+                    }
+                    else if (this.in_bounds(newx, newy) && this.map[newy][newx]){
                         if (!this.used_map[newy][newx]){
                             this.used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
@@ -131,7 +147,7 @@ class MyRobot extends BCAbstractRobot {
         */
         //this.log("running store_origin_castle code")
         //this.log("STEP NUM: " + step)
-        if (this.me.unit !== SPECS.CASTLE && step < 1) {
+        if (this.me.unit !== SPECS.CASTLE && step < 2) {
             var visible = this.getVisibleRobots()
             var closest_ally = null
             for (var r = 1; r < visible.length; r++) {
@@ -141,6 +157,15 @@ class MyRobot extends BCAbstractRobot {
                     return
                 }
             }
+        }
+    }
+
+    confirm_robot_existence(aRobot){
+        try {
+            aRobot.id
+            return true
+        } catch(TypeError) {
+            return false
         }
     }
 
@@ -156,7 +181,6 @@ class MyRobot extends BCAbstractRobot {
         if (this.sym == null){
             find_sym(this.map)
         }
-
         if (this.me.unit === SPECS.PREACHER){
             // find the nearest allied castle
             this.store_origin_castle()
@@ -189,7 +213,7 @@ class MyRobot extends BCAbstractRobot {
             }
 
             // start populating the enemy castle list
-            if (this.enemy_castles.length == 0){
+            if (this.enemy_castles.length == 0 && this.killed_enemy == false){
                 this.sym = find_sym(this.map)
                 var mirror_coord = this.me.y 
                 if (this.sym == 'y'){
@@ -209,7 +233,7 @@ class MyRobot extends BCAbstractRobot {
             var path_to_enemy_castle = []
             var path_to_origin_castle = []
             var path_to_follow = []
-            if (this.enemy_castles.length >= 1){
+            if (this.enemy_castles.length >= 1 && this.killed_enemy == false){
                 for (var i in this.enemy_castles){
                     //this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
                     var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
@@ -221,31 +245,39 @@ class MyRobot extends BCAbstractRobot {
                     } else if (path == null) {
                         //DO THIS AFTER ENEMY CASTLES CONTAINS MULTIPLE CASTLE LOCATIONS
                         //enemy_castles = enemy_castles.slice(1,enemy_castles.length)
-                        enemy_castles = null
+                        this.enemy_castles = []
                         path_to_enemy_castle = null
-                        this.log("cannot find nearest enemy castle")
+                        this.killed_enemy = true
+                        this.log("nearest enemy castle is gone")
                     }
                 }
-            } else if (this.origin_castle !== null) {
-                var path = this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y)
-                path_to_origin_castle = path
-                this.log("got path to origin castle")
+            } else if (this.confirm_robot_existence(this.origin_castle) == true && this.at_home == false) {
+                this.log("returning to my origin castle")
+                path_to_origin_castle= this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y, true)
+                if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
+                    this.at_home = true
+                }
             }
             // can the nearest allied castle still spawn units?
             //if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
             // move to enemy castle
 
-            if(path_to_enemy_castle!== null){
+            if(path_to_enemy_castle!== null && this.killed_enemy ==false){ // if enemy castle still exists, attack
                 this.log ("Attacking the enemy!!")
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            } else if (this.origin_castle !== null) {
-                this.log("Returning Home")
-                //return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1]-this.me.y)
-            } else {
-                this.log("i'm homeless q_q")
+            } else if (this.at_home == true && this.homeless == false) { //if near castle and castle exists, do nothing
                 return
-            }
+            } else if (this.confirm_robot_existence(this.origin_castle) == true && path_to_origin_castle !== null) { 
+                this.log("PATH: " + path_to_origin_castle)
+                this.log("Returning Home")
+                return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1]-this.me.y)
+            } else if (this.homeless == false && this.confirm_robot_existence(this.origin_castle) == false) {
+                this.log("i'm homeless q_q")
+                this.homeless = true
+                return
+            } 
     
+
             //}
         }
         if (this.me.unit === SPECS.PROPHET){
