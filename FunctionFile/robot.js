@@ -7,6 +7,21 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 var built = false;
 var step = -1;
 
+
+// List of functions
+//in_bounds(x,y) == checks if it is within the bounds of the map
+//traversable(x, y, robot_map) = checks if it is within the map and robotmap location is true
+//random_ordering(inp_array) = returns the list of options mixed
+//bfs(startx, starty, x, y, ignore_goal=false) = bfs, if the ignore goal is true then you ignore the last tile
+//initalize_coor() = initalizes the coor x and y and sym of map
+//is_adjacent(x1, y1, x2, y2) = returns if the tiles are next to each other
+//find_free_adjacent_tile(x, y) = returns the next free tile around x y 
+//determine_bounds(x_start, x_bound, y_start, y_bound) = for the castle to find its private variables
+//determine_nearest_karb(x_start, x_bound, y_start, y_bound) = 
+
+
+
+
 class MyRobot extends BCAbstractRobot {
     constructor(){
         super();
@@ -35,7 +50,6 @@ class MyRobot extends BCAbstractRobot {
         return (x >= 0 && x < this.W && y >= 0 && y < this.H)
     }
 
-
     traversable(x, y, visible_robot_map) {
         // check if a square is in bounds, not terrain, and not occupied
         return (this.in_bounds(x, y) && this.map[y][x] && visible_robot_map[y][x] <= 0)
@@ -60,7 +74,6 @@ class MyRobot extends BCAbstractRobot {
 
         return array;
     }
-
 
     bfs(startx, starty, x, y, ignore_goal=false) {
         /*
@@ -138,26 +151,87 @@ class MyRobot extends BCAbstractRobot {
         return null
     }
 
-    turn() {
-        step++;
-        if (this.H == null){
-            this.H = this.map.length
-        }
-        if (this.W == null){
-            this.W = this.map[0].length;
-        }
+    is_adjacent(x1, y1, x2, y2){
+        return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2))
+    }
 
-        if (this.sym == null){
-            find_sym(this.map)
+    find_free_adjacent_tile(x, y){
+        for (var i in this.random_ordering(this.mvmt_choices)){
+            var choice = this.mvmt_choices[i];
+            var x = this.me.x + choice[0];
+            var y = this.me.y + choice[1];
+            if (this.traversable(x, y, this.getVisibleRobotMap())){
+                return choice
+            }
         }
+        return null
+    }
 
-        if (this.me.unit === SPECS.PREACHER){
-            // find the nearest allied castle
-            var blocking = false
-            var units = this.getVisibleRobots()
-            var castle_coords = null
-            for (var i in units){
-                if (units[i].team != this.me.team){
+    determine_bounds(x_start, x_bound, y_start, y_bound){
+        if (this.sym == 'x'){
+                    y_bound = Math.floor(this.H*0.5) + this.H%2
+                    if (this.me.y <= y_bound){
+                        y_start = 0
+                    } else{
+                        y_start = y_bound
+                        y_bound = this.H -1
+                    }
+                } else {
+                    x_bound = Math.floor(this.W*0.5) + this.W%2
+                    if (this.me.x <= x_bound){
+                        x_start = 0
+                    } else{
+                        x_start = x_bound
+                        x_bound = this.W -1
+                    }
+                }
+    }
+
+    determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist){
+        
+                for (var i = Math.max(x_start, this.me.x-6); i <= Math.min(x_bound, this.me.x+6); i++){
+                    for (var j = Math.max(y_start, this.me.y-6); j <= Math.min(y_bound, this.me.y+6); j++){
+                        if (this.karbonite_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j)
+                            if (l != null && l.length < best_dist){
+                                best_dist = l.length
+                                this.nearest_karb = [i,j]
+                                this.nearest_karb_d = best_dist
+                            }
+                        }
+                    }
+                }
+    }
+
+    determine_opp_castle(){
+        var mirror_coord = this.me.y 
+                if (this.sym == 'y'){
+                    mirror_coord = this.me.x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    this.opposite_castle = [mirror_coord, this.me.y]
+                } else {
+                    this.opposite_castle = [this.me.x, mirror_coord]
+                }
+    }
+
+    determine_opp_location(x,y,sym){
+        
+                var mirror_coord = y 
+                if (this.sym == 'y'){
+                    mirror_coord = x
+                }
+                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                if (this.sym == 'y'){
+                    return [mirror_coord, y]
+                } else {
+                    return [x, mirror_coord]
+                }
+    }
+
+    attack_acc_for_friendly(units, i){
+        if (units[i].team != this.me.team){
                     var enemy_unit = [units[i].x, units[i].y]
                     var atk = [[0,0]]
                     atk.push(this.mvmt_choices.slice())
@@ -176,6 +250,35 @@ class MyRobot extends BCAbstractRobot {
                     }
                     return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                 }
+    }
+
+    initalize_coor(){
+        if (this.H == null){
+            this.H = this.map.length
+        }
+        if (this.W == null){
+            this.W = this.map[0].length;
+        }
+
+        if (this.sym == null){
+            find_sym(this.map)
+        }
+    }
+
+
+
+    turn() {
+        step++;
+        this.initalize_coor()
+
+        if (this.me.unit === SPECS.PREACHER){
+            // find the nearest allied castle
+            var blocking = false
+            var units = this.getVisibleRobots()
+            var castle_coords = null
+            for (var i in units){
+                this.attack_acc_for_friendly(units, i);
+
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
@@ -189,16 +292,7 @@ class MyRobot extends BCAbstractRobot {
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
                 this.sym = find_sym(this.map)
-                var mirror_coord = this.me.y 
-                if (this.sym == 'y'){
-                    mirror_coord = this.me.x
-                }
-                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
-                if (this.sym == 'y'){
-                    this.nearest_enemy_castle = [mirror_coord, this.me.y]
-                } else {
-                    this.nearest_enemy_castle = [this.me.x, mirror_coord]
-                }
+                this.nearest_enemy_castle = this.determine_opp_location(this.me.x,this.me.y,this.sym)
                 this.enemy_castles.push(this.nearest_enemy_castle)
             }
 
@@ -242,6 +336,7 @@ class MyRobot extends BCAbstractRobot {
             //    }
             //}
         }
+
         if (this.me.unit === SPECS.PROPHET){
             // find the nearest allied castle
             var blocking = false
@@ -269,16 +364,7 @@ class MyRobot extends BCAbstractRobot {
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
                 this.sym = find_sym(this.map)
-                var mirror_coord = this.me.y 
-                if (this.sym == 'y'){
-                    mirror_coord = this.me.x
-                }
-                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
-                if (this.sym == 'y'){
-                    this.nearest_enemy_castle = [mirror_coord, this.me.y]
-                } else {
-                    this.nearest_enemy_castle = [this.me.x, mirror_coord]
-                }
+                this.nearest_enemy_castle = this.determine_opp_location(this.me.x,this.me.y,this.sym)
                 this.enemy_castles.push(this.nearest_enemy_castle)
             }
 
@@ -372,52 +458,21 @@ class MyRobot extends BCAbstractRobot {
                 var x_bound = this.W -1
                 var y_start = 0
                 var y_bound = this.H -1
-                if (this.sym == 'x'){
-                    y_bound = Math.floor(this.H*0.5) + this.H%2
-                    if (this.me.y <= y_bound){
-                        y_start = 0
-                    } else{
-                        y_start = y_bound
-                        y_bound = this.H -1
-                    }
-                } else {
-                    x_bound = Math.floor(this.W*0.5) + this.W%2
-                    if (this.me.x <= x_bound){
-                        x_start = 0
-                    } else{
-                        x_start = x_bound
-                        x_bound = this.W -1
-                    }
-                }
                 var best_dist = 1000
-                for (var i = Math.max(x_start, this.me.x-6); i <= Math.min(x_bound, this.me.x+6); i++){
-                    for (var j = Math.max(y_start, this.me.y-6); j <= Math.min(y_bound, this.me.y+6); j++){
-                        if (this.karbonite_map[j][i]){
-                            var l = this.bfs(this.me.x, this.me.y, i, j)
-                            if (l != null && l.length < best_dist){
-                                best_dist = l.length
-                                this.nearest_karb = [i,j]
-                                this.nearest_karb_d = best_dist
-                            }
-                        }
-                    }
-                }
+
+                this.determine_bounds(x_start, x_bound, y_start, y_bound);
+                this.determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist);
+
+                
                 this.castleTalk(Math.min(255, best_dist))
                 this.num_castles = this.getVisibleRobots().length
 
                 // find corresponding enemy castle
-                var mirror_coord = this.me.y 
-                if (this.sym == 'y'){
-                    mirror_coord = this.me.x
-                }
-                mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
-                if (this.sym == 'y'){
-                    this.opposite_castle = [mirror_coord, this.me.y]
-                } else {
-                    this.opposite_castle = [this.me.x, mirror_coord]
-                }
+                this.determine_opp_castle();
+                
+                
 
-                // check if other castles have published
+                // check if other castles have published //determines the maincastle
                 var units = this.getVisibleRobots()
                 var i_am_last = true
                 var i_am_best = true
@@ -538,21 +593,9 @@ class MyRobot extends BCAbstractRobot {
             return
         }
     }
-    is_adjacent(x1, y1, x2, y2){
-        return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2))
-    }
+    
 
-    find_free_adjacent_tile(x, y){
-        for (var i in this.random_ordering(this.mvmt_choices)){
-            var choice = this.mvmt_choices[i];
-            var x = this.me.x + choice[0];
-            var y = this.me.y + choice[1];
-            if (this.traversable(x, y, this.getVisibleRobotMap())){
-                return choice
-            }
-        }
-        return null
-    }
+    
 }
 
 function find_sym(map){
@@ -568,97 +611,3 @@ function find_sym(map){
  }
 
 var robot = new MyRobot();
-
-/*
-round 0
-ALL CASTLES
-- castletalk nearest fuel bfs path dist
-- count the castles
-
-round 1
-ALL CASTLES
-- if there is a castle with closer fuel:
-- set MAINCASTLE false
-- find location of corresponding enemy castle
-- castletalk enemy castle X 
-
-- else if visibleunits.length > number of castles recorded last turn:
-- set MAINCASTLE false
-- find location of corresponding enemy castle
-- castletalk enemy castle X 
-
-- else
-- set MAINCASTLE true
-- build pilgrim
-
-PILGRIM1:
-- calculate enemy castle 0 based on nearest visible allied castle
-- move toward enemy castle 0
-
-turn 2
-OTHERCASTLES:
-- castletalk(enemy castle Y)
-
-MAINCASTLE:
-- read enemy castle Xs on castletalk
-- build PROHET1
-
-PILGRIM1:
-- move toward enemy castle 0
-
-PROPHET1:
-- calculate enemy castle 0 based on nearest visible allied castle
-- move toward enemy castle 0
-
-turn3:
-MAINCASTLE:
-- read enemy castle Ys on castletalk
-- calculate enemy castle positions
-- broadcast enemy castle 1 position, range 1
-- build PROHET2
-
-PILGRIM1, PROPHET1:
-- move toward enemycastle0
-
-PROPHET2:
-- calculate enemy castle 0 based on nearest visible allied castle
-- move toward enemy castle 0
-
-turn4:
-MAINCASTLE:
-- broadcast enemy castle 2 position, range 1
-- build PROPHET3
-
-PILGRIM1, PROPHET1, PROPHET2
-- move toward enemycastle0
-
-PROPHET3:
-- read enemycastle1 from castle broadcast
-- broadcast enemycastle1, range 3
-- calculate enemycastle0 based on nearest visible allied castle
-- move toward enemycastle0
-
-
-PROPHET ALGO:
-- calculate enemycastle0 based on visible allied castle
-- listen for broadcasts, if the coord != any existing enemy castle,
-    add to list of enemy castles AND broadcast that coord, range 3
-- move toward allied pilgrim closest to target castle
-
-PILGRIM1 ALGO:
-- calculate enemycastle0 based on visible allied castle
-- listen for broadcasts, if the coord != any existing enemy castle,
-    add to list of enemy castles
-- move toward enemycastle 0
-
-PILGRIM2 ALGO:
-- enemycastle 2 will be broadcast from castle on spawn, listen for it
-- if its there, rebroadcast range 3
-- go to nearest fuel
-- mine
-- go to nearest castle/church
-- deposit
-
-
-*/
-
