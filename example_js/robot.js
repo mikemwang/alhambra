@@ -493,7 +493,7 @@ class MyRobot extends BCAbstractRobot {
 
                 if (i_am_last && i_am_best){
                     this.maincastle = true
-                    this.check_broadcasts(units)
+                    this.check_broadcasts()
                 }
             }
 
@@ -517,34 +517,35 @@ class MyRobot extends BCAbstractRobot {
                 this.log(this.maincastle)
 
                 if (!this.maincastle){
-                    this.check_to_broadcast(units)
+                    this.check_to_broadcast()
                 }
                 ///* PATH TESTING
                 if (this.maincastle){
                     // if you already requested xs last turn, they should be available now
-                    this.check_broadcasts(units)
+                    this.check_broadcasts()
 
                     this.num_pilgrims ++;
-                    var karb_x_bin = this.nearest_karb[0].toString(2)
-                    var karb_y_bin = this.nearest_karb[1].toString(2)
-                    var zeros = ""
-                    if (karb_x_bin.length < 6){
-                        for (var i = 0; i < 6-karb_x_bin.length; i++){
-                            zeros = zeros + "0"
-                        }
-                    }
-                    karb_x_bin = zeros + karb_x_bin
+                    this.signal_encode("1000", this.nearest_karb[0], this.nearest_karb[1], 2)
+                    //var karb_x_bin = this.nearest_karb[0].toString(2)
+                    //var karb_y_bin = this.nearest_karb[1].toString(2)
+                    //var zeros = ""
+                    //if (karb_x_bin.length < 6){
+                    //    for (var i = 0; i < 6-karb_x_bin.length; i++){
+                    //        zeros = zeros + "0"
+                    //    }
+                    //}
+                    //karb_x_bin = zeros + karb_x_bin
 
-                    var zeros = ""
-                    if (karb_y_bin.length < 6){
-                        for (var i = 0; i < 6-karb_y_bin.length; i++){
-                            zeros = zeros + "0"
-                        }
-                    }
-                    karb_y_bin = zeros + karb_y_bin
+                    //var zeros = ""
+                    //if (karb_y_bin.length < 6){
+                    //    for (var i = 0; i < 6-karb_y_bin.length; i++){
+                    //        zeros = zeros + "0"
+                    //    }
+                    //}
+                    //karb_y_bin = zeros + karb_y_bin
 
-                    var message = "1000"+karb_x_bin+karb_y_bin
-                    this.signal(parseInt(message, 2), 2)
+                    //var message = "1000"+karb_x_bin+karb_y_bin
+                    //this.signal(parseInt(message, 2), 2)
                     return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 }
                 return
@@ -554,11 +555,11 @@ class MyRobot extends BCAbstractRobot {
                 var units = this.getVisibleRobots()
                 if (this.maincastle){
                     // check the enemy castle Xs
-                    this.check_broadcasts(units)
+                    this.check_broadcasts()
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    this.check_to_broadcast(units)
+                    this.check_to_broadcast()
                 }
             }
 
@@ -566,74 +567,47 @@ class MyRobot extends BCAbstractRobot {
                 var units = this.getVisibleRobots()
                 if (this.maincastle){
                     // check the enemy castle Xs
-                    this.check_broadcasts(units)
+                    this.check_broadcasts()
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    this.check_to_broadcast(units)
+                    this.check_to_broadcast()
                 }
             }
             else if (step == 4){
                 var units = this.getVisibleRobotMap()
                 if (this.maincastle){
-                    this.check_broadcasts(units)
+                    this.check_broadcasts()
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    this.check_to_broadcast(units)
+                    this.check_to_broadcast()
                 }
             }
             else {
-                if (!this.maincastle){
+                if (this.maincastle){
+                    this.check_broadcasts()
                     return
-                }
-                if (this.received_xs && this.requesting_ys && !this.received_ys){
-                    for (var i in units){
-                        if (units[i].castle_talk > 0 && !this.is_self(units[i])){
-                            this.enemy_castles[units[i].id][1] = units[i].castle_talk
-                        }
+                    if (this.num_prophets == 3 && !this.attack_signalled){
+                        // attack signal
+                        this.attack_signalled = true
+                        this.signal(parseInt("1101000000000000", 2), 9)
                     }
-                    this.received_ys = true
-                    this.enemy_castles = [this.opposite_castle.slice()].concat(Object.values(this.enemy_castles))
-                    this.log(this.enemy_castles)
-                }
-                return
-                if (this.num_prophets == 3 && !this.attack_signalled){
-                    // attack signal
-                    this.attack_signalled = true
-                    this.signal(parseInt("1101000000000000", 2), 9)
-                }
-                if (this.karbonite >= 25){
-                    this.num_prophets ++
-                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    if (this.karbonite >= 25){
+                        this.num_prophets ++
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
 
-                }
-                if (this.num_pilgrims < 1){
-                    if (this.karbonite < 10){
-                        return
                     }
-                    this.num_pilgrims ++
-                    var karb_x_bin = this.nearest_karb[0].toString(2)
-                    var karb_y_bin = this.nearest_karb[1].toString(2)
-                    var zeros = ""
-                    if (karb_x_bin.length < 6){
-                        for (var i = 0; i < 6-karb_x_bin.length; i++){
-                            zeros = zeros + "0"
+                    if (this.num_pilgrims < 1){
+                        if (this.karbonite < 10){
+                            return
                         }
+                        this.num_pilgrims ++
+                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
-                    karb_x_bin = zeros + karb_x_bin
-
-                    var zeros = ""
-                    if (karb_y_bin.length < 6){
-                        for (var i = 0; i < 6-karb_y_bin.length; i++){
-                            zeros = zeros + "0"
-                        }
-                    }
-                    karb_y_bin = zeros + karb_y_bin
-
-                    var message = "1000"+karb_x_bin+karb_y_bin
-                    this.signal(parseInt(message, 2), 2)
-                    return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    return
+                } else {
+                    return
                 }
             }
             return
@@ -654,10 +628,13 @@ class MyRobot extends BCAbstractRobot {
         }
         return null
     }
+
     is_self(r){
         return r.id == this.me.id
     }
-    check_to_broadcast(units){
+
+    check_to_broadcast(){
+        var units = this.getVisibleRobots()
         if (this.num_castles != 1){
             for (var i in units){ // if the Xs were requested, broadcast it
                 if (units[i].castle_talk == 255){
@@ -671,7 +648,34 @@ class MyRobot extends BCAbstractRobot {
             }
         }
     }
-    check_broadcasts(units){
+    signal_encode(header, msg1, msg2, range){
+        /*
+        msg1, msg2 had better fucking be less than 63, or bad things will
+        happen
+        */
+        var msg1_bin = msg1.toString(2)
+        var zeros = ""
+        if (msg1_bin.length < 6){
+            for (var i = 0; i < 6-msg1_bin.length; i++){
+                zeros = zeros + "0"
+            }
+        }
+        msg1_bin = zeros + msg1_bin
+
+        var msg2_bin = msg2.toString(2)
+        var zeros = ""
+        if (msg2_bin.length < 6){
+            for (var i = 0; i < 6-msg2_bin.length; i++){
+                zeros = zeros + "0"
+            }
+        }
+        msg2_bin = zeros + msg2_bin
+
+        var message = header+msg1_bin+msg2_bin
+        this.signal(parseInt(message, 2), range)
+    }
+    check_broadcasts(){
+        var units = this.getVisibleRobots()
         // checks other castles for broadcasted enemy castle x positions
         // request xs if not already requested
         // else update xs and request ys
@@ -703,6 +707,7 @@ class MyRobot extends BCAbstractRobot {
             }
             this.received_ys = true
             // convert to list
+            this.log(this.enemy_castles)
             this.enemy_castles = [this.opposite_castle.slice()].concat(Object.values(this.enemy_castles))
             this.log(this.enemy_castles)
         }
