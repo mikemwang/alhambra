@@ -150,7 +150,6 @@ class MyRobot extends BCAbstractRobot {
 
     turn() {
         step++;
-        this.log("my turn "+step)
         if (this.H == null){
             this.H = this.map.length
         }
@@ -475,6 +474,7 @@ class MyRobot extends BCAbstractRobot {
                 } else {
                     this.opposite_castle = [this.me.x, mirror_coord]
                 }
+                this.log(this.opposite_castle)
 
                 // check if other castles have published
                 var units = this.getVisibleRobots()
@@ -493,9 +493,7 @@ class MyRobot extends BCAbstractRobot {
 
                 if (i_am_last && i_am_best){
                     this.maincastle = true
-                    this.castleTalk(255)
-                    this.log("requested xs here")
-                    this.requesting_xs = true
+                    this.check_broadcasts(units)
                 }
             }
 
@@ -507,7 +505,7 @@ class MyRobot extends BCAbstractRobot {
                     }
 
                     for (var i in units){
-                        if (units[i].castle_talk < this.me.castle_talk && units[i].id != this.me.id) {
+                        if (units[i].castle_talk == 255 || (units[i].castle_talk < this.me.castle_talk && !this.is_self(units[i]))) {
                             this.maincastle = false
                         }
                     }
@@ -516,39 +514,15 @@ class MyRobot extends BCAbstractRobot {
                         this.maincastle = true
                     }
                 }
+                this.log(this.maincastle)
 
                 if (!this.maincastle){
-                    for (var i in units){
-                        // if the Xs were requested, broadcast it
-                        if (units[i].castle_talk == 255 && !this.is_self(units[i])){
-                            // +1 one since impossible to distinguish not broadcasting
-                            // from a broadcast of 0
-                            this.log("broadcast x")
-                            this.castleTalk(this.opposite_castle[0]+1)
-                        }
-                    }
+                    this.check_to_broadcast(units)
                 }
                 ///* PATH TESTING
                 if (this.maincastle){
                     // if you already requested xs last turn, they should be available now
-                    if (this.requesting_xs && !this.received_xs){
-                        for (var i in units){
-                            if (units[i].castle_talk > 0 && !this.is_self(units[i])){
-                                this.enemy_castles[units[i].id] = units[i].castle_talk-1
-                            }
-                        }
-                        this.received_xs = true
-                        // request the Ys
-                        this.requesting_ys = true
-                        this.castleTalk(254)
-                    } else if (!this.received_xs){
-                        // request the enemy castle xs
-                        this.log("requested xs there")
-                        this.requesting_xs = true
-                        this.castleTalk(255)
-                    }
-
-                    // it's impossible to have requested the Ys at this time
+                    this.check_broadcasts(units)
 
                     this.num_pilgrims ++;
                     var karb_x_bin = this.nearest_karb[0].toString(2)
@@ -571,8 +545,6 @@ class MyRobot extends BCAbstractRobot {
 
                     var message = "1000"+karb_x_bin+karb_y_bin
                     this.signal(parseInt(message, 2), 2)
-                    // request the other enemy castle xs
-                    // find free tile to build preacher
                     return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 }
                 return
@@ -582,46 +554,11 @@ class MyRobot extends BCAbstractRobot {
                 var units = this.getVisibleRobots()
                 if (this.maincastle){
                     // check the enemy castle Xs
-                    if (this.requesting_xs && !this.received_xs){
-                        for (var i in units){
-                            if (units[i].castle_talk > 0 && !this.is_self(units[i])){
-                                this.enemy_castles[units[i].id] = [units[i].castle_talk-1, 0]
-                            }
-                        }
-                        this.received_xs = true
-                        // request the Ys
-                        this.requesting_ys = true
-                        this.castleTalk(254)
-                    } else if (!this.received_xs){
-                        // request the enemy castle xs
-                        this.requesting_xs = true
-                        this.castleTalk(255)
-
-                    // if you have already received xs that means you requested Ys
-                    // last turn, so they should be available now
-                    } else if (this.received_xs && this.requesting_ys && !this.received_ys){
-                        for (var i in units){
-                            if (units[i].unit == SPECS.CASTLE){
-                                this.enemy_castles[units[i].id][1] = units[i].castle_talk - 1
-                            }
-                        }
-                        this.received_ys = true
-                    }
-
-
+                    this.check_broadcasts(units)
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    for (var i in units){ // if the Xs were requested, broadcast it
-                        if (units[i].castle_talk == 255){
-                            this.log("gotta broadcast x")
-                            this.castleTalk(this.opposite_castle[0])
-                        }
-                        if (units[i].castle_talk == 254){
-                            this.log("gotta broadcast y1")
-                            this.castleTalk(this.opposite_castle[1])
-                        }
-                    }
+                    this.check_to_broadcast(units)
                 }
             }
 
@@ -629,70 +566,38 @@ class MyRobot extends BCAbstractRobot {
                 var units = this.getVisibleRobots()
                 if (this.maincastle){
                     // check the enemy castle Xs
-                    if (this.requesting_xs && !this.received_xs){
-                        for (var i in units){
-                            if (units[i].castle_talk > 0 && !this.is_self(units[i])){
-                                this.enemy_castles[units[i].castle_talk] = [units[i].castle_talk, 0]
-                            }
-                        }
-                        this.received_xs = true
-                        // request the Ys
-                        this.requesting_ys = true
-                        this.castleTalk(254)
-                    } else if (!this.received_xs){
-                        // request the enemy castle xs
-                        this.requesting_xs = true
-                        this.castleTalk(255)
-                    }
-
-                    if (this.received_xs && this.requesting_ys && !this.received_ys){
-                        for (var i in units){
-                            if (units[i].castle_talk > 0 && !this.is_self(units[i])){
-                                this.enemy_castles[units[i].id][1] = units[i].castle_talk
-                            }
-                        }
-                        this.received_ys = true
-                    }
-                    this.log(this.enemy_castles)
+                    this.check_broadcasts(units)
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    for (var i in units){ // if the Xs were requested, broadcast it
-                        if (units[i].castle_talk == 255){
-                            this.log("gotta broadcast x")
-                            this.castleTalk(this.opposite_castle[0]+1)
-                        }
-                        if (units[i].castle_talk == 254){
-                            this.log("gotta broadcast y")
-                            this.castleTalk(this.opposite_castle[1]+1)
-                        }
-                    }
+                    this.check_to_broadcast(units)
                 }
             }
-            else if (step > 3){
-                return
-                this.log(this.enemy_castles)
-            }
             else if (step == 4){
+                var units = this.getVisibleRobotMap()
                 if (this.maincastle){
+                    this.check_broadcasts(units)
                     this.num_preachers ++
                     return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                 } else {
-                    // only Ys are being requested now
-                    for (var i in units){ 
-                        if (units[i].unit == SPECS.CASTLE){
-                            if (units[i].castle_talk == 254){
-                                this.castleTalk(this.opposite_castle[1])
-                            }
-                        }
-                    }
+                    this.check_to_broadcast(units)
                 }
             }
             else {
                 if (!this.maincastle){
                     return
                 }
-                this.log(this.num_prophets)
+                if (this.received_xs && this.requesting_ys && !this.received_ys){
+                    for (var i in units){
+                        if (units[i].castle_talk > 0 && !this.is_self(units[i])){
+                            this.enemy_castles[units[i].id][1] = units[i].castle_talk
+                        }
+                    }
+                    this.received_ys = true
+                    this.enemy_castles = [this.opposite_castle.slice()].concat(Object.values(this.enemy_castles))
+                    this.log(this.enemy_castles)
+                }
+                return
                 if (this.num_prophets == 3 && !this.attack_signalled){
                     // attack signal
                     this.attack_signalled = true
@@ -752,6 +657,56 @@ class MyRobot extends BCAbstractRobot {
     is_self(r){
         return r.id == this.me.id
     }
+    check_to_broadcast(units){
+        if (this.num_castles != 1){
+            for (var i in units){ // if the Xs were requested, broadcast it
+                if (units[i].castle_talk == 255){
+                    this.log("gotta broadcast x")
+                    this.castleTalk(this.opposite_castle[0]+1)
+                }
+                if (units[i].castle_talk == 254){
+                    this.log("gotta broadcast y")
+                    this.castleTalk(this.opposite_castle[1]+1)
+                }
+            }
+        }
+    }
+    check_broadcasts(units){
+        // checks other castles for broadcasted enemy castle x positions
+        // request xs if not already requested
+        // else update xs and request ys
+        // else update ys
+        if (this.requesting_xs && !this.received_xs){
+            for (var i in units){
+                if (units[i].castle_talk > 0 && !this.is_self(units[i])){
+                    this.enemy_castles[units[i].id] = [units[i].castle_talk-1, 0]
+                }
+            }
+            this.received_xs = true
+            // request the Ys
+            this.log("requested ys here")
+            this.log(this.enemy_castles)
+            this.requesting_ys = true
+            this.castleTalk(254)
+            return true
+        } else if (!this.received_xs){
+            // request the enemy castle xs
+            this.log("requested xs there")
+            this.requesting_xs = true
+            this.castleTalk(255)
+            return true
+        } else if (this.received_xs && this.requesting_ys && !this.received_ys){
+            for (var i in units){
+                if (units[i].castle_talk > 0 && !this.is_self(units[i])){
+                    this.enemy_castles[units[i].id][1] = units[i].castle_talk - 1
+                }
+            }
+            this.received_ys = true
+            // convert to list
+            this.enemy_castles = [this.opposite_castle.slice()].concat(Object.values(this.enemy_castles))
+            this.log(this.enemy_castles)
+        }
+   }
 }
 
 function find_sym(map){
