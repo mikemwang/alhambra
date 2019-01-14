@@ -157,14 +157,14 @@ class MyRobot extends BCAbstractRobot {
                     return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                    castle_coords = [units[i].x, units[i].y]     
+                    castle_coords = [units[i].x, units[i].y]
                 }
             }
 
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
                 this.sym = find_sym(this.map)
-                var mirror_coord = this.me.y 
+                var mirror_coord = this.me.y
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
                 }
@@ -191,7 +191,7 @@ class MyRobot extends BCAbstractRobot {
                         path_to_enemy_castle = path
                     }
                 }
-            } 
+            }
             // can the nearest allied castle still spawn units?
             //if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
             // move to enemy castle
@@ -202,7 +202,7 @@ class MyRobot extends BCAbstractRobot {
             } else {
                 //this.log("NOT MOVING BC KILLED CASTLE ALREADY")
             }
-    
+
             //}
         }
         if (this.me.unit === SPECS.PROPHET){
@@ -230,14 +230,14 @@ class MyRobot extends BCAbstractRobot {
                     return this.attack(enemy_unit[0]-this.x, enemy_unit[1]-this.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                    castle_coords = [units[i].x, units[i].y]     
+                    castle_coords = [units[i].x, units[i].y]
                 }
             }
 
             // start populating the enemy castle list
             if (this.enemy_castles.length == 0){
                 this.sym = find_sym(this.map)
-                var mirror_coord = this.me.y 
+                var mirror_coord = this.me.y
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
                 }
@@ -262,7 +262,7 @@ class MyRobot extends BCAbstractRobot {
                         path_to_enemy_castle = path
                     }
                 }
-            } 
+            }
             // can the nearest allied castle still spawn units?
             if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
                 // if not, get the fuck out of the way
@@ -279,7 +279,7 @@ class MyRobot extends BCAbstractRobot {
             //        var otherx = 0
             //        var othery = 0
             //        if (this.sym == 'x'){
-            //            
+            //
             //        }
             //    }
             //}
@@ -301,7 +301,7 @@ class MyRobot extends BCAbstractRobot {
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
-                this.sym = find_sym(this.map)                
+                this.sym = find_sym(this.map)
                 var x_start = 0
                 var x_bound = this.W -1
                 var y_start = 0
@@ -338,7 +338,7 @@ class MyRobot extends BCAbstractRobot {
                 this.num_castles = this.getVisibleRobots().length
 
                 // find corresponding enemy castle
-                var mirror_coord = this.me.y 
+                var mirror_coord = this.me.y
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
                 }
@@ -360,7 +360,7 @@ class MyRobot extends BCAbstractRobot {
                         } else if (units[i].castle_talk <= best_dist) {
                             i_am_best = false
                             this.maincastle = false
-                        }                
+                        }
                     }
                 }
                 //this.log(i_am_last)
@@ -475,12 +475,12 @@ ALL CASTLES
 - if there is a castle with closer fuel:
 - set MAINCASTLE false
 - find location of corresponding enemy castle
-- castletalk enemy castle X 
+- castletalk enemy castle X
 
 - else if visibleunits.length > number of castles recorded last turn:
 - set MAINCASTLE false
 - find location of corresponding enemy castle
-- castletalk enemy castle X 
+- castletalk enemy castle X
 
 - else
 - set MAINCASTLE true
