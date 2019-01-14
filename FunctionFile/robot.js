@@ -15,9 +15,9 @@ var step = -1;
 //bfs(startx, starty, x, y, ignore_goal=false) = bfs, if the ignore goal is true then you ignore the last tile
 //initalize_coor() = initalizes the coor x and y and sym of map
 //is_adjacent(x1, y1, x2, y2) = returns if the tiles are next to each other
-//find_free_adjacent_tile(x, y) = returns the next free tile around x y 
+//find_free_adjacent_tile(x, y) = returns the next free tile around x y
 //determine_bounds(x_start, x_bound, y_start, y_bound) = for the castle to find its private variables
-//determine_nearest_karb(x_start, x_bound, y_start, y_bound) = 
+//determine_nearest_karb(x_start, x_bound, y_start, y_bound) =
 
 
 
@@ -188,7 +188,7 @@ class MyRobot extends BCAbstractRobot {
     }
 
     determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist){
-        
+
                 for (var i = Math.max(x_start, this.me.x-6); i <= Math.min(x_bound, this.me.x+6); i++){
                     for (var j = Math.max(y_start, this.me.y-6); j <= Math.min(y_bound, this.me.y+6); j++){
                         if (this.karbonite_map[j][i]){
@@ -204,7 +204,7 @@ class MyRobot extends BCAbstractRobot {
     }
 
     determine_opp_castle(){
-        var mirror_coord = this.me.y 
+        var mirror_coord = this.me.y
                 if (this.sym == 'y'){
                     mirror_coord = this.me.x
                 }
@@ -217,8 +217,8 @@ class MyRobot extends BCAbstractRobot {
     }
 
     determine_opp_location(x,y,sym){
-        
-                var mirror_coord = y 
+
+                var mirror_coord = y
                 if (this.sym == 'y'){
                     mirror_coord = x
                 }
@@ -280,7 +280,7 @@ class MyRobot extends BCAbstractRobot {
                 this.attack_acc_for_friendly(units, i);
 
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                    castle_coords = [units[i].x, units[i].y]     
+                    castle_coords = [units[i].x, units[i].y]
                 }
                 if (this.isRadioing(units[i])){
                     if (units[i].signal.toString(2).slice(0,4) == "1111"){
@@ -349,14 +349,14 @@ class MyRobot extends BCAbstractRobot {
                     return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                    castle_coords = [units[i].x, units[i].y]     
+                    castle_coords = [units[i].x, units[i].y]
                 }
                 if (this.isRadioing(units[i])){
                     if (units[i].signal.toString(2).slice(0,4) == "1111"){
                         blocking = true
                     }
                 }
-                if (units[i].unit == PILGRIM && units[i].team == this.me.team){
+                if (units[i].unit == SPECS.PILGRIM && units[i].team == this.me.team){
                     pilgrim_coords = [units[i].x, units[i].y]
                 }
             }
@@ -380,7 +380,7 @@ class MyRobot extends BCAbstractRobot {
                         path_to_enemy_castle = path
                     }
                 }
-            } 
+            }
             // no adjacent to prevent splash
             if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
                 if (path_to_enemy_castle.length > 0){
@@ -453,7 +453,7 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
-                this.sym = find_sym(this.map)                
+                this.sym = find_sym(this.map)
                 var x_start = 0
                 var x_bound = this.W -1
                 var y_start = 0
@@ -463,14 +463,14 @@ class MyRobot extends BCAbstractRobot {
                 this.determine_bounds(x_start, x_bound, y_start, y_bound);
                 this.determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist);
 
-                
+
                 this.castleTalk(Math.min(255, best_dist))
                 this.num_castles = this.getVisibleRobots().length
 
                 // find corresponding enemy castle
                 this.determine_opp_castle();
-                
-                
+
+
 
                 // check if other castles have published //determines the maincastle
                 var units = this.getVisibleRobots()
@@ -483,7 +483,7 @@ class MyRobot extends BCAbstractRobot {
                         } else if (units[i].castle_talk <= best_dist) {
                             i_am_best = false
                             this.maincastle = false
-                        }                
+                        }
                     }
                 }
 
@@ -521,7 +521,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
 
-                //PATH TESTING*/                 
+                //PATH TESTING*/
                 return
             }
 
@@ -593,9 +593,6 @@ class MyRobot extends BCAbstractRobot {
             return
         }
     }
-    
-
-    
 }
 
 function find_sym(map){

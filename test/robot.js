@@ -187,15 +187,33 @@ class MyRobot extends BCAbstractRobot {
         this.log("no path found")
     }
 
-    find_karbonite(kmap){
-      // km = this.getKarboniteMap()
+    // find_karbonite(kmap){
+    //   // km = this.getKarboniteMap()
+    //
+    //   this.log(kmap)
+    // }
 
-      this.log(kmap)
+    determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist){
+
+                for (var i = Math.max(x_start, this.me.x-6); i <= Math.min(x_bound, this.me.x+6); i++){
+                    for (var j = Math.max(y_start, this.me.y-6); j <= Math.min(y_bound, this.me.y+6); j++){
+                        if (this.karbonite_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j)
+                            if (l != null && l.length < best_dist){
+                                best_dist = l.length
+                                this.nearest_karb = [i,j]
+                                this.nearest_karb_d = best_dist
+                            }
+                        }
+                    }
+                }
     }
 
+
     turn() {
+        // this.determine_nearest_karb()
         step++;
-        this.find_karbonite(this.karbonite_map)
+        // this.find_karbonite(this.karbonite_map)
         if (this.H == null){
             this.H = this.map.length
         }
