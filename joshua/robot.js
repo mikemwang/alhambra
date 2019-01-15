@@ -520,21 +520,24 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
+            // // move to front line (facing enemy castle)
+            // if (path_to_enemy_castle.length > 0){
+            //     // no adjacent to prevent splash
+            //     if (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+            //         return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            //     }
+            // }
 
-            if (path_to_enemy_castle.length > 0){
-                // no adjacent to prevent splash
-                if (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
-                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                }
-            }
-            // make sure you're not on a karb
-            if (this.karbonite_map[this.me.y][this.me.x]){
-                if (path.length == 0){
-                    var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
-                    return this.move(...move)
-                }
-                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            }
+            // // make sure you're not on a karb
+            // if (this.karbonite_map[this.me.y][this.me.x]){
+            //     if (path.length == 0){
+            //         var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
+            //         return this.move(...move)
+            //     }
+            //     return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            // }
+
+            return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
         }
 
         if (this.me.unit === SPECS.CASTLE) {
