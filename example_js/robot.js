@@ -6,12 +6,15 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 // 1001, 1010, 1011: enemy castle info ping
 // 1100: require msg[1:0] enemy castle coordinate
 
+// 1101: attack directive
+
 // 1111: needs more space
 // 
 
 // castletalk parsing
-// 11111111: maincastle requesting enemy castle x pos
-// 11111110: requesting enemy castle y pos 
+// 255: maincastle requesting enemy castle x pos
+// 254: requesting enemy castle y pos 
+// 253: group reports victory, increment target castle and send next wave
 
 var built = false;
 var step = -1;
@@ -122,30 +125,17 @@ class MyRobot extends BCAbstractRobot {
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
-                    //if (cur_path.length == 1){
-                        if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
-                            if (!this.used_map[newy][newx]){
-                                this.used_map[newy][newx] = true
-                                var newpath = cur_path.slice(0, cur_path.length)
-                                newpath.push([newx, newy])
-                                if (newx == x && newy == y) {
-                                    return newpath.slice(1)
-                                }
-                                new_paths.push(newpath)
+                    if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
+                        if (!this.used_map[newy][newx]){
+                            this.used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            if (newx == x && newy == y) {
+                                return newpath.slice(1)
                             }
+                            new_paths.push(newpath)
                         }
-                    //}
-                    //else if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                    //    if (!this.used_map[newy][newx]){
-                    //        this.used_map[newy][newx] = true
-                    //        var newpath = cur_path.slice(0, cur_path.length)
-                    //        newpath.push([newx, newy])
-                    //        if (newx == x && newy == y) {
-                    //            return newpath.slice(1)
-                    //        }
-                    //        new_paths.push(newpath)
-                    //    }
-                    //}
+                    }
                 }
             }
             if (new_paths.length > 0) {
@@ -196,7 +186,27 @@ class MyRobot extends BCAbstractRobot {
                     }
                     if (header == "1101"){
                         this.attack_signalled = true
-                        this.target_castle = this.parse_coords(units[i].signal)[1]
+                        this.log("attack signalled")
+                        var coords = this.parse_coords(units[i].signal)
+                        this.log(coords)
+                        var found = false
+                        for (var k in this.enemy_castle_list){
+                            if (coords[0] == this.enemy_castle_list[k][0] && coords[1] == this.enemy_castle_list[k][1]){
+                                this.target_castle = k
+                                found = true
+                                break
+                            }
+                        } 
+                        if (!found){
+                            for (var k in this.tried_asking){
+                                if (this.tried_asking[k] == null || this.tried_asking[k] == false){
+                                    this.tried_asking[k] = true
+                                    this.enemy_castle_list[k] = coords.slice()
+                                    this.target_castle = k
+                                    break
+                                }
+                            }
+                        }
                     }
                     if (header == "1100"){
                         var needed = this.parse_coords(units[i].signal)[1]
@@ -223,10 +233,12 @@ class MyRobot extends BCAbstractRobot {
                 }
             }
 
-            // comms priority queue
             var signalled = false
+
             if (this.attack_signalled){
-                this.signal_encode("1101", 0, this.target_castle, 4)
+                if (!this.attack_signalled){
+                    this.signal_encode("1101", ...this.enemy_castle_list[this.target_castle], 4)
+                }
                 signalled = true
             } else if (new_castle != null){
                 this.signal(new_castle, 9)
@@ -241,6 +253,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
+
             if (this.tried_asking[0] == null ||this.tried_asking[1] == null ||this.tried_asking[2] == null ){
                 this.log(this.enemy_castle_list)
             }
@@ -257,6 +270,8 @@ class MyRobot extends BCAbstractRobot {
                 }
                 return
             }
+
+
 
             // no adjacent to prevent splash on castle
             if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
@@ -282,15 +297,6 @@ class MyRobot extends BCAbstractRobot {
         }
 
         if (this.me.unit === SPECS.PILGRIM){
-            //// PATH TEST
-            ////var path = this.bfs(this.me.x, this.me.y, 32, 38, true) // 118
-            ////var path = this.bfs(this.me.x, this.me.y, 33, 50, true) // 1001
-            //var path = this.bfs(this.me.x, this.me.y, 3, 44, true) // 183
-            //if (path != null){
-            //    return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
-            //}
-            //return
-            // PATH TEST
             var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
@@ -431,22 +437,28 @@ class MyRobot extends BCAbstractRobot {
             }
 
             if (this.enemy_castle_list.length != 0){
-                if (this.num_preachers < 3 && this.karbonite >= 30){
-                    this.num_preachers ++
-                    this.log("build preacher")
-                    this.signal_encode(((step%this.num_castles)+9).toString(2), ...this.enemy_castle_list[step%this.num_castles], 9)
-                    return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
+                if (this.num_preachers < 3){
+                    if (this.karbonite >= 30){
+                        this.num_preachers ++
+                        this.log("build preacher")
+                        this.signal_encode(((step%this.num_castles)+9).toString(2), ...this.enemy_castle_list[step%this.num_castles], 9)
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
+                    }
                 } else if (this.karbonite >= 25){
                     this.num_prophets ++
                     this.log("build_prophet")
-                    this.signal_encode(((step%this.num_castles)+9).toString(2), ...this.enemy_castle_list[step%this.num_castles], 9)
+                    if (this.num_prophets > 0 && this.num_prophets%3 == 0){
+                        this.signal_encode("1101", ...this.enemy_castle_list[this.target_castle], 9)
+                    } else {
+                        this.signal_encode(((step%this.num_castles)+9).toString(2), ...this.enemy_castle_list[step%this.num_castles], 9)
+                    }
                     return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
                 } else {
                     for (var i in units){
                         if (this.isRadioing(units[i])){
                             var header = this.parse_header(units[i].signal)
                             if (header == "1100"){
-                                var t = this.parse_coords(units[i].signal)[0]
+                                var t = this.parse_coords(units[i].signal)[1]
                                 if (t < this.enemy_castle_list.length){
                                     this.signal_encode((t+9).toString(2), ...this.enemy_castle_list[t],2)
                                 }
@@ -454,37 +466,7 @@ class MyRobot extends BCAbstractRobot {
                         }
                     }
                 }
-
             }
-            
-            /*
-            else {
-                if (this.maincastle){
-                    this.check_broadcasts()
-                    return
-                    if (this.num_prophets == 3 && !this.attack_signalled){
-                        // attack signal
-                        this.attack_signalled = true
-                        this.signal(parseInt("1101000000000000", 2), 9)
-                    }
-                    if (this.karbonite >= 25){
-                        this.num_prophets ++
-                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-
-                    }
-                    if (this.num_pilgrims < 1){
-                        if (this.karbonite < 10){
-                            return
-                        }
-                        this.num_pilgrims ++
-                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                    }
-                    return
-                } else {
-                    return
-                }
-            }
-            */
         }
     }
     is_adjacent(x1, y1, x2, y2){
