@@ -163,10 +163,21 @@ class MyRobot extends BCAbstractRobot {
     confirm_robot_existence(aRobot){
         try {
             aRobot.id
+            this.log("castle exists")
             return true
         } catch(TypeError) {
             return false
         }
+    }
+
+    deposit_to_castle(myRobot, myCastle){
+        if (this.confirm_robot_existence(myCastle) === true && this.is_adjacent(myRobot.x, myRobot.y, myCastle.x, myCastle.y)){
+            if (myRobot.fuel > 0 || myRobot.karbonite > 0) {
+                this.log("Depositing karbonite: " + myRobot.karbonite + " fuel: " + myRobot.fuel)
+                return this.give ((myCastle.x - this.me.x), (myCastle.y-this.me.y), myRobot.karbonite, myRobot.fuel)
+            }
+        }
+        return null
     }
 
     turn() {
@@ -261,6 +272,15 @@ class MyRobot extends BCAbstractRobot {
             // can the nearest allied castle still spawn units?
             //if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
             // move to enemy castle
+            if (this.confirm_robot_existence(this.enemy_castles[0]) == false) {
+                this.killed_enemy = true
+            }
+
+            if (this.at_home === true){
+                if (this.deposit_to_castle(this.me, this.origin_castle) !== null) {
+                    return this.deposit_to_castle(this.me, this.origin_castle)
+                }
+            }
 
             if(path_to_enemy_castle!== null && this.killed_enemy ==false){ // if enemy castle still exists, attack
                 this.log ("Attacking the enemy!!")
@@ -276,7 +296,7 @@ class MyRobot extends BCAbstractRobot {
                 this.homeless = true
                 return
             } 
-    
+            
 
             //}
         }
@@ -346,7 +366,7 @@ class MyRobot extends BCAbstractRobot {
         }
         if (this.me.unit === SPECS.PILGRIM){
             this.log("pilgrim not doing anything")
-/*            var units = this.getVisibleRobots()
+            var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
                     if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
@@ -384,7 +404,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-*/
+
         }
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
@@ -494,17 +514,17 @@ class MyRobot extends BCAbstractRobot {
             }
             else {
                 if (this.maincastle){
-                    if(this.fuel > 50 && this.karbonite > 30) {
+                    if(this.fuel >= 50 && this.karbonite >= 30) {
                         this.num_preachers ++
                         this.log("built preacher wahoo")
                         return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
-                    else if(this.fuel > 50 && this.karbonite > 10) {
+                    else if(this.fuel >= 50 && this.karbonite >= 10) {
                         this.num_pilgrims ++
                         this.log("FUEL: " + this.fuel)
                         this.log("KARBONITE: " + this.karbonite)
                         this.log("built pilgrim wahoo")
-                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
+                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y))
                     }
                 }
             }
