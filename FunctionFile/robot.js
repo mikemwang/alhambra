@@ -212,13 +212,13 @@ class MyRobot extends BCAbstractRobot {
     }
 
     determine_nearest_karb2(value){
-        var best_dist = 1000;
-                for (var i = this.me.x-value; i <= this.me.x+ value; i++){
-                    for (var j =  this.me.y- value; j <= this.me.y+ value; j++){
+        var best_dist = 1000
+                for (var i = Math.max(this.me.x-6, 0); i <= Math.min(this.W-1, this.me.x+6); i++){
+                    for (var j = Math.max(this.me.y-6, 0); j <= Math.min(this.W-1, this.me.y+6); j++){
                         if (this.karbonite_map[j][i]){
                             var l = this.bfs(this.me.x, this.me.y, i, j)
                             if (l != null && l.length < best_dist){
-                                
+                                best_dist = l.length
                                 this.nearest_karb = [i,j]
                                 this.nearest_karb_d = best_dist
                             }
@@ -394,14 +394,6 @@ class MyRobot extends BCAbstractRobot {
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
                     castle_coords = [units[i].x, units[i].y]     
                 }
-                if (this.isRadioing(units[i])){
-                    if (units[i].signal.toString(2).slice(0,4) == "1111"){
-                        blocking = true
-                    }
-                }
-                if (units[i].unit == SPECS.PILGRIM && units[i].team == this.me.team){
-                    pilgrim_coords = [units[i].x, units[i].y]
-                }
             }
 
             // start populating the enemy castle list
@@ -425,7 +417,7 @@ class MyRobot extends BCAbstractRobot {
                 }
             } 
             // no adjacent to prevent splash
-            
+            this.log(this.me.id + "      " + path_to_enemy_castle[0])
             return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                 
 
