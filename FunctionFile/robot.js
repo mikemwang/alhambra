@@ -211,6 +211,22 @@ class MyRobot extends BCAbstractRobot {
                 }
     }
 
+    determine_nearest_karb2(value){
+        var best_dist = 1000;
+                for (var i = this.me.x-value; i <= this.me.x+ value; i++){
+                    for (var j =  this.me.y- value; j <= this.me.y+ value; j++){
+                        if (this.karbonite_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j)
+                            if (l != null && l.length < best_dist){
+                                
+                                this.nearest_karb = [i,j]
+                                this.nearest_karb_d = best_dist
+                            }
+                        }
+                    }
+                }
+    }
+
     determine_opp_castle(){
         var mirror_coord = this.me.y 
                 if (this.sym == 'y'){
@@ -413,14 +429,7 @@ class MyRobot extends BCAbstractRobot {
             return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                 
 
-            // make sure you're not on a karb
-            if (this.karbonite_map[this.me.y][this.me.x]){
-                if (path_to_enemy_castle.length == 0){
-                    var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
-                    return this.move(...move)
-                }
-                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            }
+            
         }
 
         if (this.me.unit === SPECS.PILGRIM){
@@ -464,17 +473,21 @@ class MyRobot extends BCAbstractRobot {
                 this.counter = 0
             }
 
-            if (this.counter === 5){
+            if (this.counter === 3){
+                this.log("counter triggered")
                 this.flag = true
                 this.karbonite_map[this.nearest_karb[1]][this.nearest_karb[0]] = false
-                this.determine_nearest_karb(this.me.x - this.search_range, this.me.x + this.search_range, this.me.y - this.search_range, this.me.y + this.search_range, best_dist)
+                this.determine_nearest_karb2(6)
                 if(old_karb === this.nearest_karb){
-                    this.search_range ++
-                    this.log("Failed, looking again")
+                    this.log("attempting to move")
+                    var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
+                    this.move(...move)
+                    this.log("movement happened")
                 }
                 else{
-                    this.log("Switched karb dep")
-                    this.log(this.nearest_karb)
+
+                    this.log("Switched karb dep: " + this.nearest_karb)
+                    this.flag = false
                 }
             }
 
