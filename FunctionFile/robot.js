@@ -280,7 +280,7 @@ class MyRobot extends BCAbstractRobot {
 
             ***notes
             default priority order is castle, church, preacher, prophet, crusader, pilgrim
-            */
+        */
         var priority_list = []
         for (var i = 0; i < order.length; i++) {
             for (var x = 0; x < visible_bots.length; x++){
@@ -292,6 +292,36 @@ class MyRobot extends BCAbstractRobot {
         return priority_list
     }
 
+    confirm_robot_existence(aRobot){
+        /*
+            args: a robot instance whose existence you want to confirm
+            returns: boolean value describing whether or not it exists
+        */
+        try {
+            aRobot.id
+            this.log("castle exists")
+            return true
+        } catch(TypeError) {
+            return false
+        }
+    }
+
+    deposit_to_castle(myRobot, myCastle){
+        /*
+            args: a robot instance and a castle instance
+            returns: nothing
+
+            ***notes
+            will deposit all fuel and karbonite to castle
+        */
+        if (this.confirm_robot_existence(myCastle) === true && this.is_adjacent(myRobot.x, myRobot.y, myCastle.x, myCastle.y)){
+            if (myRobot.fuel > 0 || myRobot.karbonite > 0) {
+                this.log("Depositing karbonite: " + myRobot.karbonite + " fuel: " + myRobot.fuel)
+                return this.give ((myCastle.x - this.me.x), (myCastle.y-this.me.y), myRobot.karbonite, myRobot.fuel)
+            }
+        }
+        return null
+    }
 
 
     turn() {
