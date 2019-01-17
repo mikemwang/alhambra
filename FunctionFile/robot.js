@@ -51,6 +51,8 @@ class MyRobot extends BCAbstractRobot {
         this.counter = 0
         this.search_range = 6
         this.flag = false
+        this.steps_from_start = 3
+        this.inital_pilgrims = 0
     }
 
     in_bounds(x, y) {
@@ -211,6 +213,19 @@ class MyRobot extends BCAbstractRobot {
                 }
     }
 
+    determine_resource_dep_amounts(map, range){
+        var count = 0
+        for (var i = Math.max(this.me.x- range, 0); i <= Math.min(this.W-1, this.me.x+ range); i++){
+                    for (var j = Math.max(this.me.y-range, 0); j <= Math.min(this.W-1, this.me.y+range); j++){
+                        if (map[j][i]){
+                                count ++
+                            
+                        }
+                    }
+                }
+        return count
+    }
+
     determine_nearest_karb2(value){
         var best_dist = 1000
                 for (var i = Math.max(this.me.x-6, 0); i <= Math.min(this.W-1, this.me.x+6); i++){
@@ -362,6 +377,11 @@ class MyRobot extends BCAbstractRobot {
                     this.signal(parseInt("1111000000000000", 2), 4)
                 }
             }
+
+            if(this.steps_from_start !== 0){
+                this.steps_from_start -= 1
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            }
             // make sure you're not on a karb
             if (this.karbonite_map[this.me.y][this.me.x]){
                 if (path_to_enemy_castle.length == 0){
@@ -419,9 +439,6 @@ class MyRobot extends BCAbstractRobot {
             // no adjacent to prevent splash
             this.log(this.me.id + "      " + path_to_enemy_castle[0])
             return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                
-
-            
         }
 
         if (this.me.unit === SPECS.PILGRIM){
@@ -522,6 +539,7 @@ class MyRobot extends BCAbstractRobot {
 
                 this.determine_bounds(x_start, x_bound, y_start, y_bound);
                 this.determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist);
+                this.inital_pilgrims = this.determine_resource_dep_amounts(this.karbonite_map, 8);
 
                 
                 this.castleTalk(Math.min(255, best_dist))
@@ -550,6 +568,8 @@ class MyRobot extends BCAbstractRobot {
                 if (i_am_last && i_am_best){
                     this.maincastle = true
                 }
+
+
             }
 
             else if (step == 1){
@@ -613,7 +633,7 @@ class MyRobot extends BCAbstractRobot {
                 
                 
                 
-                if (this.num_pilgrims < 2){
+                if (this.num_pilgrims < this.inital_pilgrims){
                     if (this.karbonite < 10){
                         return
                     }
