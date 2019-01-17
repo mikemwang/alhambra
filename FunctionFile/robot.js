@@ -22,6 +22,8 @@ var step = -1;
 //determine_opp_location(x,y,sym) = find the opposite location
 
 //attack_priority = takes a list of visible robots and sorts them in priority order
+//confirm_robot_existence = takes a robot and confirms its existence
+//deposit_to_castle =  takes a robot and a castle and deposits robot's karb & fuel to castle
 
 
 
