@@ -24,6 +24,7 @@ var step = -1;
 //attack_priority = takes a list of visible robots and sorts them in priority order
 //confirm_robot_existence = takes a robot and confirms its existence
 //deposit_to_castle =  takes a robot and a castle and deposits robot's karb & fuel to castle
+//store_origin_castle = stores origin castle of a robot in this.origin_castle on the first 2 turns
 
 
 
@@ -53,6 +54,9 @@ class MyRobot extends BCAbstractRobot {
         this.counter = 0
         this.search_range = 6
         this.flag = false
+        this.origin_castle = null
+        this.at_home = false
+        this.killed_enemy = false
     }
 
     in_bounds(x, y) {
@@ -295,7 +299,7 @@ class MyRobot extends BCAbstractRobot {
         /*
             args: a list of visible robots, optional: list of priority order
             returns: a list of visible robots in priority order
-
+            4,5,2,0,1,3
             ***notes
             default priority order is castle, church, preacher, prophet, crusader, pilgrim
         */
@@ -339,6 +343,29 @@ class MyRobot extends BCAbstractRobot {
             }
         }
         return null
+    }
+
+    store_origin_castle() {
+        /*
+        args: none
+        returns: none
+
+        ***notes
+        stores original castle it spawned from in this.origin_castle
+        */
+        //this.log("running store_origin_castle code")
+        //this.log("STEP NUM: " + step)
+        if (this.me.unit !== SPECS.CASTLE && step < 2) {
+            var visible = this.getVisibleRobots()
+            var closest_ally = null
+            for (var r = 1; r < visible.length; r++) {
+                if (visible[r].unit === 0) { //if is castle
+                    this.origin_castle = visible[r]
+                    this.log("ORIGIN CASTLE ID: " + this.origin_castle.id)
+                    return
+                }
+            }
+        }
     }
 
 
@@ -418,6 +445,8 @@ class MyRobot extends BCAbstractRobot {
             var units = this.getVisibleRobots()
             var pilgrim_coords = null
             var castle_coords = null
+            var path_to_origin_castle = []
+            this.store_origin_castle()
             for (var i in units){
                 if (units[i].team != this.me.team){
                     var enemy_unit = [units[i].x, units[i].y]
@@ -429,7 +458,7 @@ class MyRobot extends BCAbstractRobot {
             }
 
             // start populating the enemy castle list
-            if (this.enemy_castles.length == 0){
+            if (this.enemy_castles.length == 0 && this.killed_enemy == false){
                 this.sym = find_sym(this.map)
                 this.nearest_enemy_castle = this.determine_opp_location(this.me.x,this.me.y,this.sym)
                 this.enemy_castles.push(this.nearest_enemy_castle)
@@ -441,17 +470,58 @@ class MyRobot extends BCAbstractRobot {
             if (this.enemy_castles.length >= 1){
                 for (var i in this.enemy_castles){
                     var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
-                    if (path != null && path.length < closest_d){
+                    if (path !== null && path.length < closest_d){
                         closest_d = path.length
                         this.nearest_enemy_castle = this.enemy_castles[i]
                         path_to_enemy_castle = path
+                    } else if (path == null || path.length <= 4) {
+                        this.enemy_castles = []
+                        path_to_enemy_castle = null
+                        this.killed_enemy = true
+                        this.log("nearest enemy castle is gone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")                        
                     }
                 }
-            } 
+            } else {
+                this.killed_enemy = true
+                this.log("returning to my origin castle~~ bc it still exists")
+                this.log("LOCATION: " + this.me.x + " " + this.me.y)
+                this.log("CASTLE LOCATION: " + this.origin_castle.x + " " + this.origin_castle.y)
+                path_to_enemy_castle = null
+                path_to_origin_castle= this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y)
+                this.log("PATH: " + path_to_origin_castle)
+                if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
+                    this.at_home = true
+                }
+            }
+
             // no adjacent to prevent splash
-            this.log(this.me.id + "      " + path_to_enemy_castle[0])
-            return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                
+            //this.log(this.me.id + "      " + path_to_enemy_castle[0])
+            //this.log("PATH #2: "+ path_to_origin_castle)
+
+            if (this.killed_enemy && !this.at_home) {
+                return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1] - this.me.y)
+
+            } else {
+                this.log("going towards enemy castle")
+                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+            } 
+
+/*            else if (this.confirm_robot_existence (this.origin_castle) && this.at_home == false && path_to_origin_castle !== null) {
+                this.log("returning home")
+                return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1] - this.me.y)
+            } else if (this.at_home == true) {
+                this.log("home sweet home")
+            } else {
+                this.log("neither enemy nor origin castles still exist")
+            }
+*/                
+            if (this.at_home === true){
+                var message = "1111"
+                this.signal(parseInt(message, 2), 2)
+                if (this.deposit_to_castle(this.me, this.origin_castle) !== null) {
+                    return this.deposit_to_castle(this.me, this.origin_castle)
+                }
+            }
 
             
         }
@@ -642,8 +712,15 @@ class MyRobot extends BCAbstractRobot {
 
             else {
                 //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
-                
-                
+                var units = this.getVisibleRobots()
+                    for (var i in units){
+                        if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
+                            var parsestring = units[i].signal.toString(2)
+                            if (parsestring.slice(0,4) == "1111"){
+                                this.killed_enemy = true
+                            }
+                        }
+                    }
                 
                 if (this.num_pilgrims < 2){
                     if (this.karbonite < 10){

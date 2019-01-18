@@ -27,6 +27,30 @@ class MyRobot extends BCAbstractRobot {
         this.killed_enemy = false
         this.homeless = false
         this.at_home = false
+        this.nearest_karb = null
+        this.nearest_karb_d = null
+        this.nearest_allied_castle = null
+        this.counter = 0
+        this.search_range = 6
+        this.flag = false
+
+
+    }
+
+    determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist){
+        
+                for (var i = Math.max(x_start, this.me.x-6); i <= Math.min(x_bound, this.me.x+6); i++){
+                    for (var j = Math.max(y_start, this.me.y-6); j <= Math.min(y_bound, this.me.y+6); j++){
+                        if (this.karbonite_map[j][i]){
+                            var l = this.bfs(this.me.x, this.me.y, i, j)
+                            if (l != null && l.length < best_dist){
+                                best_dist = l.length
+                                this.nearest_karb = [i,j]
+                                this.nearest_karb_d = best_dist
+                            }
+                        }
+                    }
+                }
     }
 
     in_bounds(x, y) {
@@ -364,8 +388,8 @@ class MyRobot extends BCAbstractRobot {
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             }
         }
+
         if (this.me.unit === SPECS.PILGRIM){
-            this.log("pilgrim not doing anything")
             var units = this.getVisibleRobots()
             if (this.nearest_karb == null){
                 for (var i in units){
@@ -381,31 +405,64 @@ class MyRobot extends BCAbstractRobot {
                 }
             }
 
+            var best_dist = 1000
+            var old_karb = this.nearest_karb
+            var at_current_karb
+
+            
+            at_current_karb = this.getVisibleRobotMap()[this.nearest_karb[1]][this.nearest_karb[0]]
+        
+            if (at_current_karb != 0 && at_current_karb != -1 && this.flag == false && at_current_karb != this.me.id){
+                this.counter ++
+                this.log(this.counter)
+            }
+            else {
+                this.counter = 0
+            }
+
+            if (this.counter === 5){
+                this.flag = true
+                this.karbonite_map[this.nearest_karb[1]][this.nearest_karb[0]] = false
+                this.determine_nearest_karb(this.me.x - this.search_range, this.me.x + this.search_range, this.me.y - this.search_range, this.me.y + this.search_range, best_dist)
+                if(old_karb === this.nearest_karb){
+                    this.search_range ++
+                    this.log("Failed, looking again")
+                }
+                else{
+                    this.log("Switched karb dep")
+                    this.log(this.nearest_karb)
+                }
+            }
+
             if (this.me.karbonite < 20){
                 if (this.karbonite_map[this.me.y][this.me.x]){
                     return this.mine()
                 }
                 var path = this.bfs(this.me.x, this.me.y, ...this.nearest_karb, true)
-                if (path !== null){
+                if (path != null){
                     if(this.traversable(...path[0], this.getVisibleRobotMap())){
-                        return this.move((path[0][0]-this.me.x), (path[0][1]-this.me.y))
+                        return this.move(path[0][0]-this.me.x, path[0][1]-this.me.y)
+                        }
                     }
                 }
-            }
+                
+            
 
             var to_castle = this.bfs(this.me.x, this.me.y, ...this.nearest_allied_castle, true)
             if (this.me.karbonite == 20){
                 if (this.is_adjacent(this.me.x, this.me.y, ...this.nearest_allied_castle)){
-                    return this.give((this.nearest_allied_castle[0]-this.me.x), (this.nearest_allied_castle[1]-this.me.y), 20, 0)
+                    return this.give(this.nearest_allied_castle[0]-this.me.x, this.nearest_allied_castle[1]-this.me.y, 20, 0)
                 }
                 else {
-                    if (to_castle !== null){
-                        return this.move((to_castle[0][0]-this.me.x), (to_castle[0][1]-this.me.y))
+                    if (to_castle != null){
+                        return this.move(to_castle[0][0]-this.me.x, to_castle[0][1]-this.me.y)
                     }
+                    this.signal(parseInt("1111000000000000", 2), 4)
                 }
             }
-
         }
+
+        
         // find nearest fuel
         if (this.me.unit === SPECS.CASTLE) {
             if (step == 0){
