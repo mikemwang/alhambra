@@ -835,16 +835,16 @@ class MyRobot extends BCAbstractRobot {
                 //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
 
                 var units = this.getVisibleRobots()
-                    for (var i in units){
-                        if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
-                            var parsestring = units[i].signal.toString(2)
-                            if (parsestring.slice(0,4) == "1111"){
-                                this.killed_enemy = true
-                            }
+                for (var i in units){
+                    if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0){
+                        var parsestring = units[i].signal.toString(2)
+                        if (parsestring.slice(0,4) == "1111"){
+                            this.killed_enemy = true
                         }
                     }
+                }
                 
-               
+                
 
                 
                 this.produce_prophet --
