@@ -1,4 +1,5 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
+import './funcfile.js'
 
 // signals
 // 1000: mine location
@@ -588,17 +589,6 @@ class MyRobot extends BCAbstractRobot {
             this.log(this.enemy_castle_list)
         }
    }
-}
-
-class allied_castle_finder extends MyRobot {
-    constructor(myrobot){
-        this.myrobot = myrobot
-        this.phase = 0
-    }
-
-    evaluate(){
-        this.phase ++
-    }
 }
 
 
