@@ -625,7 +625,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
 
-                if (count > 7) {
+                if (count > 1000) {
                     this.attack_flag = true;
                 }
 
