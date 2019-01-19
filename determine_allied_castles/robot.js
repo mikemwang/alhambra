@@ -48,6 +48,8 @@ class MyRobot extends BCAbstractRobot {
         this.received_xs = false
         this.requesting_ys = false
         this.received_ys = false
+
+        this.allied_castle_finder = null
     }
 
     in_bounds(x, y) {
@@ -339,6 +341,11 @@ class MyRobot extends BCAbstractRobot {
         }
 
         if (this.me.unit === SPECS.CASTLE) {
+            if (this.allied_castle_finder == null) this.allied_castle_finder = new Allied_Castle_Finder(this)
+            var units = this.getVisibleRobots()
+            this.allied_castle_finder.find(units)
+            this.log(this.allied_castle_finder.allied_castles)
+            return
             var units = this.getVisibleRobots()
             if (this.maincastle){
                 this.log(step)
@@ -587,16 +594,66 @@ class MyRobot extends BCAbstractRobot {
             this.enemy_castle_list = [this.opposite_castle.slice()].concat(Object.values(this.enemy_castles))
             this.log(this.enemy_castle_list)
         }
-   }
+    }
+
+    castle_talk_signal_encode(header, message){
+        var zeros = ""
+        var msg_string = message.toString(2)
+        for (var i = 0; i < 6-msg_string.length; i++){
+            zeros += "0"
+        }
+        return header+zeros
+    }
+
+    castle_talk_signal_decode(signal){
+        var msg_string = parseInt(signal, 2)
+        var zeros = ""
+        for (var i = 0; i < 8-msg_string.length; i++){
+            zeros += "0"
+        }
+        zeros += msg_string
+        return [zeros.slice(0,3), parseInt(zeros.slice(3), 2) ]
+    }
 }
 
-class allied_castle_finder extends MyRobot {
+class Allied_Castle_Finder{
     constructor(myrobot){
         this.myrobot = myrobot
         this.phase = 0
+        this.allied_castles = {}
+        this.allied_castle_list = []
+        this.done = false
     }
-
-    evaluate(){
+    find(units){
+        if (this.done){
+            return
+        }
+        if (this.phase == 0){
+            this.allied_castles[this.myrobot.me.id] = [this.myrobot.me.x, this.myrobot.me.y]
+            this.myrobot.castleTalk(this.myrobot.me.x + 1)
+        } else if (this.phase == 1){
+            this.myrobot.castleTalk(this.myrobot.me.x + 1)
+            for (var i in units){
+                if (units[i].id != this.myrobot.me.id && units[i].castle_talk != 0){
+                    this.allied_castles[units[i].id] = [units[i].castle_talk - 1, 0]
+                }
+            }
+        } else if (this.phase == 2){
+            this.myrobot.castleTalk(this.myrobot.me.y + 1)
+        } else if (this.phase == 3){
+            this.myrobot.castleTalk(this.myrobot.me.y + 1)
+            for (var i in units){
+                if (units[i].id != this.myrobot.me.id && units[i].castle_talk != 0){
+                    this.allied_castles[units[i].id][1] = units[i].castle_talk - 1
+                }
+            }
+            var keys = Object.keys(this.allied_castles)
+            keys.sort()
+            for (var i in keys){
+                this.allied_castle_list.push(this.allied_castles[keys[i]])
+            }
+            this.done = true
+        }
         this.phase ++
     }
 }
