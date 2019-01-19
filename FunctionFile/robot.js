@@ -398,7 +398,7 @@ class MyRobot extends BCAbstractRobot {
             for (var r = 1; r < visible.length; r++) {
                 if (visible[r].unit === 0) { //if is castle
                     this.origin_castle = visible[r]
-                    //this.log("ORIGIN CASTLE ID: " + this.origin_castle.id)
+                    this.log("ORIGIN CASTLE ID: " + this.origin_castle.id)
                     return
                 }
             }
@@ -486,6 +486,8 @@ class MyRobot extends BCAbstractRobot {
 
         if (this.me.unit === SPECS.PROPHET) {
             // find the nearest allied castle
+            var blocking = false
+
             if (this.turn_count === 0) {
                 var units = this.getVisibleRobots()
                 for (var i in units) {
@@ -513,6 +515,7 @@ class MyRobot extends BCAbstractRobot {
                     }
                     if (this.isRadioing(units[i])) {
                         if (units[i].signal.toString(2).slice(0, 4) == "1111") {
+                            this.log("someone says i'm blocking them ._.")
                             blocking = true
                         }
                     }
@@ -538,21 +541,22 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
 
-
-                // no adjacent to prevent splash
-                if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))) {
-                    if (path_to_enemy_castle.length > 0) {
-                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                    } else {
-                        this.signal(parseInt("1111000000000000", 2), 4)
-                    }
-                }
-
                 if (this.steps_from_start !== 0) {
-
                     this.steps_from_start -= 1
                     return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                 }
+
+                if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
+                    //if (blocking || this.is_something_else_adjacent([this.me.x, this.me.y])){
+                    if (path != null){
+                        this.log("i'm going to gtfo")
+                        return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
+                    } else {
+                            this.log("i signaled gtfo")
+                            this.signal(parseInt("1111000000000000", 2), 8)
+                    }
+                }
+
                 // make sure you're not on a karb
                 if (this.karbonite_map[this.me.y][this.me.x]) {
                     if (path_to_enemy_castle.length == 0) {
