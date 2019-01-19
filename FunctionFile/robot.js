@@ -335,7 +335,7 @@ class MyRobot extends BCAbstractRobot {
         /*
             args: a list of visible robots, optional: list of priority order
             returns: a list of visible robots in priority order
-            4,5,2,0,1,3
+            
             ***notes
             default priority order is castle, church, preacher, prophet, crusader, pilgrim
         */
@@ -840,6 +840,34 @@ class MyRobot extends BCAbstractRobot {
              else {
                 //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
 
+                var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
+                var castle_coords = null
+                for (var i in units){
+                    if (units[i].team != this.me.team){
+                        var enemy_unit = [units[i].x, units[i].y]
+                        var atk = [[0,0]]
+                        atk.push(this.mvmt_choices.slice())
+                        var friendly_fire = false
+                        for (var a in atk){
+                            for (var j in units){
+                                if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                    friendly_fire = true
+                                    break
+                                }
+                            }
+                            if (!friendly_fire){
+                                enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                                break
+                            }
+                        }
+                        this.log ("NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
+                        return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
+                    }
+                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                        castle_coords = [units[i].x, units[i].y]     
+                    }
+                }
+
                 var units = this.getVisibleRobots()
                 for (var i in units) {
                     if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0) {
@@ -849,9 +877,6 @@ class MyRobot extends BCAbstractRobot {
                         }
                     }
                 }
-
-
-
 
                 this.produce_prophet--
 
