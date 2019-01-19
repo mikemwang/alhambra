@@ -840,7 +840,7 @@ class MyRobot extends BCAbstractRobot {
              else {
                 //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
 
-                var units = attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
+                var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
                 var castle_coords = null
                 for (var i in units){
                     if (units[i].team != this.me.team){
