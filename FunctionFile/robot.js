@@ -73,7 +73,8 @@ class MyRobot extends BCAbstractRobot {
         this.turn_count = 0
         this.attack_flag = false
         this.wait_rounds_for_others = 10
-
+        this.strategy = null
+        this.distance = null
     }
 
     in_bounds(x, y) {
@@ -406,104 +407,188 @@ class MyRobot extends BCAbstractRobot {
 
     }
 
+    determine_strategy(minDist = 20){
+        // find corresponding enemy castle
+        this.determine_opp_castle();
+        this.log("OPPOSITE CASTLE AT: " + this.opposite_castle)
+        this.distance = this.bfs(this.me.x, this.me.y, this.opposite_castle[0], this.opposite_castle[1]).length
+        this.log("THE DISTANCE FROM ME TO ENEMY CASTLE IS: " + this.distance)
+        if (this.strategy !== 3 && this.strategy !== 1) {
+            if (this.distance <= minDist) {
+                this.log("RUSH STRATEGY")
+                this.strategy = 0
+                this.castleTalk(100 + this.distance)
+                this.log("I SENT OUT: " + (100 + this.distance))
+            } else {
+                this.log("ECON/DEFENSE STRATEGY")
+                this.strategy = 1
+            }
+        }
+    }
 
+    castle_check_strategy(){
+        this.log("getting signal")
+        var signal = this.check_castleTalk()
+        if (signal > 100 && signal < 200) {
+            this.log("I got a signal")
+            signal = signal - 100
+            if (signal < this.distance) {
+                this.strategy = 0
+                this.log("i should rush")
+                this.castleTalk(1)
+            } else {
+                this.strategy = 3
+                this.log("someone else should rush")
+            }
+        } else if (signal == 1) {
+            this.strategy = 3
+        }
+    }   
 
+    check_castleTalk(){
+        var myVisible = this.getVisibleRobots()
+        for (var i in myVisible) {
+            if (myVisible[i].id !== this.me.id && myVisible[i].castle_talk !== 0) {
+                this.log("The castleTalk message I got sent was: " + myVisible[i].castle_talk)
+                return myVisible[i].castle_talk
+            }
+        }
+    }
+
+    check_signals() {
+        var myVisible = this.getVisibleRobots()
+        for (var i in myVisible) {
+            if (myVisible[i].id !== this.me.id && myVisible[i].team == this.me.team && myVisible[i].signal !== 0) {
+                this.log("The signal message I got sent was: " + myVisible[i].signal)
+                this.log("MY UNIT TYPE IS: " + this.me.unit)
+                return myVisible[i].signal
+            }
+        }
+        return null    
+    }
+
+    robot_check_strategy() {
+        if (this.check_signals() == 13) {
+            this.strategy = 1
+        } else {
+            this.strategy = 0
+        }
+
+    }
     turn() {
         step++;
         this.initalize_coor()
 
         if (this.me.unit === SPECS.PREACHER) {
-            // find the nearest allied castle
-            var blocking = false
-            var units = this.getVisibleRobots()
-            var castle_coords = null
-            for (var i in units) {
-                this.attack_acc_for_friendly(units, i);
-
-                if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                    castle_coords = [units[i].x, units[i].y]
-                }
-                if (this.isRadioing(units[i])) {
-                    if (units[i].signal.toString(2).slice(0, 4) == "1111") {
-                        blocking = true
+            this.robot_check_strategy()
+            if (this.strategy == 0) {
+                                // find the nearest allied castle
+                this.store_origin_castle()
+                var units = this.attack_priority(this.getVisibleRobots())
+                var castle_coords = null
+                for (var i in units){
+                    if (units[i].team != this.me.team){
+                        var enemy_unit = [units[i].x, units[i].y]
+                        var atk = [[0,0]]
+                        atk.push(this.mvmt_choices.slice())
+                        var friendly_fire = false
+                        for (var a in atk){
+                            for (var j in units){
+                                if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                    friendly_fire = true
+                                    break
+                                }
+                            }
+                            if (!friendly_fire){
+                                enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
+                                break
+                            }
+                        }
+                        this.log ("NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
+                        return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
+                    }
+                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                        castle_coords = [units[i].x, units[i].y]     
                     }
                 }
-            }
 
-            // start populating the enemy castle list
-            if (this.enemy_castles.length == 0) {
-                this.sym = find_sym(this.map)
-                this.nearest_enemy_castle = this.determine_opp_location(this.me.x, this.me.y, this.sym)
-                this.enemy_castles.push(this.nearest_enemy_castle)
-            }
-
-            // find the closest enemy castle
-            var closest_d = 1000
-            var path_to_enemy_castle = []
-            if (this.enemy_castles.length >= 1) {
-                for (var i in this.enemy_castles) {
-                    var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
-                    if (path != null && path.length < closest_d) {
-                        closest_d = path.length
-                        this.nearest_enemy_castle = this.enemy_castles[i]
-                        path_to_enemy_castle = path
+                // start populating the enemy castle list
+                if (this.enemy_castles.length == 0 && this.killed_enemy == false){
+                    this.sym = find_sym(this.map)
+                    var mirror_coord = this.me.y 
+                    if (this.sym == 'y'){
+                        mirror_coord = this.me.x
                     }
+                    mirror_coord = (this.H - this.H%2)-mirror_coord + ((this.H%2) - 1)
+                    if (this.sym == 'y'){
+                        this.nearest_enemy_castle = [mirror_coord, this.me.y]
+                    } else {
+                        this.nearest_enemy_castle = [this.me.x, mirror_coord]
+                    }
+                    this.enemy_castles.push(this.nearest_enemy_castle)
                 }
-            }
 
-
-            // no adjacent to prevent splash
-            if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))) {
-                if (path_to_enemy_castle.length > 0) {
-                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                } else {
-                    this.signal(parseInt("1111000000000000", 2), 4)
-                }
-            }
-
-            if (this.steps_from_start !== 0) {
-
-                this.steps_from_start -= 1
-                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            }
-            // make sure you're not on a karb
-            if (this.karbonite_map[this.me.y][this.me.x]) {
-                if (path_to_enemy_castle.length == 0) {
-                    var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
-                    return this.move(...move)
-                }
-                return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            }
-            // prevent traffic jams
-            //var cross = [[1,0],[0,1],[-1,0],[0,-1]]
-            //var visible_bots = this.getVisibleRobotMap()
-            //for (i in cross){
-            //    if (visible_bots[this.me.y+cross[i][1]][this.me.x+cross[i][0]]>0){
-            //        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-            //    }
-            //}
-        }
-
-        if (this.me.unit === SPECS.PROPHET) {
-            // find the nearest allied castle
-            var blocking = false
-
-            if (this.turn_count === 0) {
-                var units = this.getVisibleRobots()
-                for (var i in units) {
-                    if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0) {
-                        this.nearest_allied_castle = [units[i].x, units[i].y]
-                        var parsestring = units[i].signal.toString(2)
-
-                        if (parsestring.slice(0, 5) == "10000") {
-                            this.defensive_flag = true
+                // find the closest enemy castle
+                var closest_d = 1000
+                var path_to_enemy_castle = []
+                var path_to_origin_castle = []
+                var path_to_follow = []
+                if (this.enemy_castles.length >= 1 && this.killed_enemy == false){
+                    for (var i in this.enemy_castles){
+                        //this.log("ENEMY CASTLE AT: " + this.enemy_castles[i])
+                        var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+                        //this.log("THIS IS MY PATH: " + path)
+                        if (path !== null && path.length < closest_d){
+                            closest_d = path.length
+                            this.nearest_enemy_castle = this.enemy_castles[i]
+                            path_to_enemy_castle = path
+                        } else if (path == null) {
+                            //DO THIS AFTER ENEMY CASTLES CONTAINS MULTIPLE CASTLE LOCATIONS
+                            //enemy_castles = enemy_castles.slice(1,enemy_castles.length)
+                            this.enemy_castles = []
+                            path_to_enemy_castle = null
+                            this.killed_enemy = true
+                            this.log("nearest enemy castle is gone")
                         }
                     }
+                } else if (this.confirm_robot_existence(this.origin_castle) == true && this.at_home == false) {
+                    this.log("returning to my origin castle")
+                    path_to_origin_castle= this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y, true)
+                    if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
+                        this.at_home = true
+                    }
                 }
-                this.turn_count++
-            }
+                // can the nearest allied castle still spawn units?
+                //if (castle_coords != null && this.find_free_adjacent_tile(...castle_coords) == null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
+                // move to enemy castle
+                if (this.confirm_robot_existence(this.enemy_castles[0]) == false) {
+                    this.killed_enemy = true
+                }
 
-            if (this.defensive_flag === true) {
+                if (this.at_home === true){
+                    if (this.deposit_to_castle(this.me, this.origin_castle) !== null) {
+                        return this.deposit_to_castle(this.me, this.origin_castle)
+                    }
+                }
+
+                if(path_to_enemy_castle!== null && this.killed_enemy ==false){ // if enemy castle still exists, attack
+                    this.log ("Attacking the enemy!!")
+                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                } else if (this.at_home == true && this.homeless == false) { //if near castle and castle exists, do nothing
+                    return
+                } else if (this.confirm_robot_existence(this.origin_castle) == true && path_to_origin_castle !== null && this.at_home == false) { 
+                    this.log("PATH: " + path_to_origin_castle)
+                    this.log("Returning Home")
+                    return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1]-this.me.y)
+                } else if (this.homeless == false && this.confirm_robot_existence(this.origin_castle) == false) {
+                    this.log("i'm homeless q_q")
+                    this.homeless = true
+                    return
+                } 
+
+
+            } else {
+                // find the nearest allied castle
                 var blocking = false
                 var units = this.getVisibleRobots()
                 var castle_coords = null
@@ -515,11 +600,11 @@ class MyRobot extends BCAbstractRobot {
                     }
                     if (this.isRadioing(units[i])) {
                         if (units[i].signal.toString(2).slice(0, 4) == "1111") {
-                            this.log("someone says i'm blocking them ._.")
                             blocking = true
                         }
                     }
                 }
+
                 // start populating the enemy castle list
                 if (this.enemy_castles.length == 0) {
                     this.sym = find_sym(this.map)
@@ -541,23 +626,22 @@ class MyRobot extends BCAbstractRobot {
                     }
                 }
 
-                if (this.steps_from_start !== 0) {
-                    this.steps_from_start -= 1
-                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                }
 
-                if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
-                    //if (blocking || this.is_something_else_adjacent([this.me.x, this.me.y])){
-                    if (path != null){
-                        this.log("i'm going to gtfo")
-                        return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
+                // no adjacent to prevent splash
+                if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))) {
+                    if (path_to_enemy_castle.length > 0) {
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                     } else {
-                            this.log("i signaled gtfo")
-                            this.signal(parseInt("1111000000000000", 2), 8)
+                        this.signal(parseInt("1111000000000000", 2), 4)
                     }
                 }
 
-                // make sure you're not on a karb
+    /*            if (this.steps_from_start !== 0) {
+
+                    this.steps_from_start -= 1
+                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                }
+    */            // make sure you're not on a karb
                 if (this.karbonite_map[this.me.y][this.me.x]) {
                     if (path_to_enemy_castle.length == 0) {
                         var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
@@ -565,113 +649,212 @@ class MyRobot extends BCAbstractRobot {
                     }
                     return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                 }
-
-
+                // prevent traffic jams
+                //var cross = [[1,0],[0,1],[-1,0],[0,-1]]
+                //var visible_bots = this.getVisibleRobotMap()
+                //for (i in cross){
+                //    if (visible_bots[this.me.y+cross[i][1]][this.me.x+cross[i][0]]>0){
+                //        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                //    }
+                //}
+                    if (path_to_enemy_castle.length > 2) {
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    }
             }
+        }
 
-            //THIS IS WHERE THE OFFENSIVE CODE STARTS
-            else {
+        if (this.me.unit === SPECS.PROPHET) {
+            this.robot_check_strategy()
+            this.log("PROPHET STRATEGY: " + this.strategy)
+            if (this.strategy == 1) {
+                // find the nearest allied castle
                 var blocking = false
-                var units = this.attack_priority(this.getVisibleRobots(), [4, 5, 2, 0, 1, 3])
-                var pilgrim_coords = null
-                var castle_coords = null
-                var path_to_origin_castle = []
-                this.store_origin_castle()
-                for (var i in units) {
-                    if (units[i].team != this.me.team) {
-                        var enemy_unit = [units[i].x, units[i].y]
-                        return this.attack(enemy_unit[0] - this.me.x, enemy_unit[1] - this.me.y)
-                    }
-                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                        castle_coords = [units[i].x, units[i].y]
-                    }
-                }
 
-                // start populating the enemy castle list
-                if (this.enemy_castles.length == 0 && this.killed_enemy == false) {
-                    this.sym = find_sym(this.map)
-                    this.nearest_enemy_castle = this.determine_opp_location(this.me.x, this.me.y, this.sym)
-                    this.enemy_castles.push(this.nearest_enemy_castle)
-                }
+                if (this.turn_count === 0) {
+                    var units = this.getVisibleRobots()
+                    for (var i in units) {
+                        if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0) {
+                            this.nearest_allied_castle = [units[i].x, units[i].y]
+                            var parsestring = units[i].signal.toString(2)
 
-                // find the closest enemy castle
-
-                var closest_d = 1000
-                var path_to_enemy_castle = []
-                if (this.enemy_castles.length >= 1) {
-                    for (var i in this.enemy_castles) {
-                        var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
-
-                        if (path !== null && path.length < closest_d) {
-
-                            closest_d = path.length
-                            this.nearest_enemy_castle = this.enemy_castles[i]
-                            path_to_enemy_castle = path
-                        } else if (path == null || path.length <= 4) {
-                            this.enemy_castles = []
-                            path_to_enemy_castle = null
-                            this.killed_enemy = true
-                            //this.log("nearest enemy castle is gone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                            if (parsestring.slice(0, 5) == "10000") {
+                                this.defensive_flag = true
+                            }
                         }
                     }
-                }
-                if (this.steps_from_start !== 0) {
-
-                    this.steps_from_start -= 1
-                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    this.turn_count++
                 }
 
-                var units = this.getVisibleRobots()
-                var count = 0
-                for (var i in units) {
-                    if (units[i].unit === SPECS.PROPHET) {
-                        count++
+                if (this.defensive_flag === true) {
+                    var blocking = false
+                    var units = this.getVisibleRobots()
+                    var castle_coords = null
+                    for (var i in units) {
+                        this.attack_acc_for_friendly(units, i);
+
+                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                            castle_coords = [units[i].x, units[i].y]
+                        }
+                        if (this.isRadioing(units[i])) {
+                            if (units[i].signal.toString(2).slice(0, 4) == "1111") {
+                                this.log("someone says i'm blocking them ._.")
+                                blocking = true
+                            }
+                        }
                     }
-                }
-
-                if (count > 1000) {
-                    this.attack_flag = true;
-                }
-
-
-                if (this.attack_flag && this.killed_enemy === false) {
-                    return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
-                }
-
-                if(this.killed_enemy === true) {
-                    //this.log("returning to my origin castle~~ bc it still exists")
-                    //this.log("LOCATION: " + this.me.x + " " + this.me.y)
-                    //this.log("CASTLE LOCATION: " + this.origin_castle.x + " " + this.origin_castle.y)
-                    path_to_enemy_castle = null
-                    path_to_origin_castle = this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y)
-                    //this.log("PATH: " + path_to_origin_castle)
-                    if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
-                        this.at_home = true
+                    // start populating the enemy castle list
+                    if (this.enemy_castles.length == 0) {
+                        this.sym = find_sym(this.map)
+                        this.nearest_enemy_castle = this.determine_opp_location(this.me.x, this.me.y, this.sym)
+                        this.enemy_castles.push(this.nearest_enemy_castle)
                     }
-                }
 
-                // no adjacent to prevent splash
-
-                //this.log(this.me.id + "      " + path_to_enemy_castle[0])
-                //this.log("PATH #2: "+ path_to_origin_castle)
-
-                if (this.killed_enemy && !this.at_home) {
-                    return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1] - this.me.y)
-
-                } 
-
-                
-                if (this.at_home === true) {
-                    var message = "1111"
-                    this.signal(parseInt(message, 2), 2)
-                    if (this.deposit_to_castle(this.me, this.origin_castle) !== null) {
-                        return this.deposit_to_castle(this.me, this.origin_castle)
+                    // find the closest enemy castle
+                    var closest_d = 1000
+                    var path_to_enemy_castle = []
+                    if (this.enemy_castles.length >= 1) {
+                        for (var i in this.enemy_castles) {
+                            var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+                            if (path != null && path.length < closest_d) {
+                                closest_d = path.length
+                                this.nearest_enemy_castle = this.enemy_castles[i]
+                                path_to_enemy_castle = path
+                            }
+                        }
                     }
+
+                    if (this.steps_from_start !== 0) {
+                        this.steps_from_start -= 1
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    }
+
+                    if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
+                        //if (blocking || this.is_something_else_adjacent([this.me.x, this.me.y])){
+                        if (path != null){
+                            this.log("i'm going to gtfo")
+                            return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
+                        } else {
+                                this.log("i signaled gtfo")
+                                this.signal(parseInt("1111000000000000", 2), 8)
+                        }
+                    }
+
+                    // make sure you're not on a karb
+                    if (this.karbonite_map[this.me.y][this.me.x]) {
+                        if (path_to_enemy_castle.length == 0) {
+                            var move = this.find_free_adjacent_tile(this.me.x, this.me.y)
+                            return this.move(...move)
+                        }
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    }
+
+
                 }
 
+                //THIS IS WHERE THE OFFENSIVE CODE STARTS
+                else {
+                    var blocking = false
+                    var units = this.attack_priority(this.getVisibleRobots(), [4, 5, 2, 0, 1, 3])
+                    var pilgrim_coords = null
+                    var castle_coords = null
+                    var path_to_origin_castle = []
+                    this.store_origin_castle()
+                    for (var i in units) {
+                        if (units[i].team != this.me.team) {
+                            var enemy_unit = [units[i].x, units[i].y]
+                            return this.attack(enemy_unit[0] - this.me.x, enemy_unit[1] - this.me.y)
+                        }
+                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                            castle_coords = [units[i].x, units[i].y]
+                        }
+                    }
 
-                //return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    // start populating the enemy castle list
+                    if (this.enemy_castles.length == 0 && this.killed_enemy == false) {
+                        this.sym = find_sym(this.map)
+                        this.nearest_enemy_castle = this.determine_opp_location(this.me.x, this.me.y, this.sym)
+                        this.enemy_castles.push(this.nearest_enemy_castle)
+                    }
 
+                    // find the closest enemy castle
+
+                    var closest_d = 1000
+                    var path_to_enemy_castle = []
+                    if (this.enemy_castles.length >= 1) {
+                        for (var i in this.enemy_castles) {
+                            var path = this.bfs(this.me.x, this.me.y, this.enemy_castles[i][0], this.enemy_castles[i][1])
+
+                            if (path !== null && path.length < closest_d) {
+
+                                closest_d = path.length
+                                this.nearest_enemy_castle = this.enemy_castles[i]
+                                path_to_enemy_castle = path
+                            } else if (path == null || path.length <= 4) {
+                                this.enemy_castles = []
+                                path_to_enemy_castle = null
+                                this.killed_enemy = true
+                                //this.log("nearest enemy castle is gone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                            }
+                        }
+                    }
+                    if (this.steps_from_start !== 0) {
+
+                        this.steps_from_start -= 1
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    }
+
+                    var units = this.getVisibleRobots()
+                    var count = 0
+                    for (var i in units) {
+                        if (units[i].unit === SPECS.PROPHET) {
+                            count++
+                        }
+                    }
+
+                    if (count > 1000) {
+                        this.attack_flag = true;
+                    }
+
+
+                    if (this.attack_flag && this.killed_enemy === false) {
+                        return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+                    }
+
+                    if(this.killed_enemy === true) {
+                        //this.log("returning to my origin castle~~ bc it still exists")
+                        //this.log("LOCATION: " + this.me.x + " " + this.me.y)
+                        //this.log("CASTLE LOCATION: " + this.origin_castle.x + " " + this.origin_castle.y)
+                        path_to_enemy_castle = null
+                        path_to_origin_castle = this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y)
+                        //this.log("PATH: " + path_to_origin_castle)
+                        if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
+                            this.at_home = true
+                        }
+                    }
+
+                    // no adjacent to prevent splash
+
+                    //this.log(this.me.id + "      " + path_to_enemy_castle[0])
+                    //this.log("PATH #2: "+ path_to_origin_castle)
+
+                    if (this.killed_enemy && !this.at_home) {
+                        return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1] - this.me.y)
+
+                    } 
+
+                    
+                    if (this.at_home === true) {
+                        var message = "1111"
+                        this.signal(parseInt(message, 2), 2)
+                        if (this.deposit_to_castle(this.me, this.origin_castle) !== null) {
+                            return this.deposit_to_castle(this.me, this.origin_castle)
+                        }
+                    }
+
+
+                    //return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
+
+                }
             }
         }
 
@@ -685,7 +868,7 @@ class MyRobot extends BCAbstractRobot {
             //}
             //return
             // PATH TEST
-
+            this.robot_check_strategy()
             var units = this.getVisibleRobots()
             if (this.nearest_karb == null) {
                 for (var i in units) {
@@ -776,13 +959,9 @@ class MyRobot extends BCAbstractRobot {
                 this.castleTalk(Math.min(255, best_dist))
                 this.num_castles = this.getVisibleRobots().length
 
-                // find corresponding enemy castle
-                this.determine_opp_castle();
-
-
-
+                this.determine_strategy(20)
                 // check if other castles have published //determines the maincastle
-                var units = this.getVisibleRobots()
+/*                var units = this.getVisibleRobots()
                 var i_am_last = true
                 var i_am_best = true
                 for (var i in units) {
@@ -800,9 +979,8 @@ class MyRobot extends BCAbstractRobot {
                     this.maincastle = true
                 }
 
-
-            } else if (step == 1) {
-                if (this.maincastle == null) {
+*/            } else if (step == 1) {
+/*                if (this.maincastle == null) {
                     var units = this.getVisibleRobots()
                     if (units.length > this.num_castles) {
                         this.maincastle = false
@@ -821,6 +999,9 @@ class MyRobot extends BCAbstractRobot {
                 if (!this.maincastle) {
                     this.castleTalk(255)
                 }
+*/              
+                this.log("step #1 for castles")
+                this.castle_check_strategy()
                 ///* PATH TESTING
 
 
@@ -842,100 +1023,112 @@ class MyRobot extends BCAbstractRobot {
             //}
             //// PATH TESTING
              else {
-                //if (this.maincastle && (this.num_pilgrims < 1 && this.nearest_karb_d < 3 || this.num_pilgrims < 2 && this.nearest_karb_d >= 3)){
-
-                var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
-                var castle_coords = null
-                for (var i in units){
-                    if (units[i].team != this.me.team){
-                        var enemy_unit = [units[i].x, units[i].y]
-                        var atk = [[0,0]]
-                        atk.push(this.mvmt_choices.slice())
-                        var friendly_fire = false
-                        for (var a in atk){
-                            for (var j in units){
-                                if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
-                                    friendly_fire = true
+/*                if (this.maincastle) {
+                    this.log("I AM THE MAIN CASTLE: " + this.me.id)
+                }
+*/              
+                if (this.strategy == 0) {
+                    this.log("i'm the rush castle")
+                    if(this.fuel >= 50 && this.karbonite >= 30) {
+                        this.num_preachers ++
+                        this.log("built preacher wahoo")
+                        return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    }
+                } else if (this.strategy == 1) { 
+                    this.signal(13, 10)
+                    var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
+                    var castle_coords = null
+                    for (var i in units){
+                        if (units[i].team != this.me.team){
+                            var enemy_unit = [units[i].x, units[i].y]
+                            var atk = [[0,0]]
+                            atk.push(this.mvmt_choices.slice())
+                            var friendly_fire = false
+                            for (var a in atk){
+                                for (var j in units){
+                                    if (units[j].team == this.me.team && this.is_adjacent(...enemy_unit, units[j].x, units[j].y)){
+                                        friendly_fire = true
+                                        break
+                                    }
+                                }
+                                if (!friendly_fire){
+                                    enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
                                     break
                                 }
                             }
-                            if (!friendly_fire){
-                                enemy_unit = [enemy_unit[0] + atk[a][0], enemy_unit[1] + atk[a][1]]
-                                break
+                            this.log ("CASTLE NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
+                            return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
+                        }
+                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                            castle_coords = [units[i].x, units[i].y]     
+                        }
+                    }
+
+                    var units = this.getVisibleRobots()
+                    for (var i in units) {
+                        if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0) {
+                            var parsestring = units[i].signal.toString(2)
+                            if (parsestring.slice(0, 4) == "1111") {
+                                this.killed_enemy = true
                             }
                         }
-                        this.log ("CASTLE NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
-                        return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                     }
-                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
-                        castle_coords = [units[i].x, units[i].y]     
-                    }
-                }
 
-                var units = this.getVisibleRobots()
-                for (var i in units) {
-                    if (units[i].unit == SPECS.CASTLE && units[i].signal_radius > 0) {
-                        var parsestring = units[i].signal.toString(2)
-                        if (parsestring.slice(0, 4) == "1111") {
-                            this.killed_enemy = true
+                    this.produce_prophet--
+
+                    if (this.num_pilgrims < this.inital_pilgrims) {
+
+                        if (this.karbonite < 10) {
+                            return
                         }
-                    }
-                }
-
-                this.produce_prophet--
-
-                if (this.num_pilgrims < this.inital_pilgrims) {
-
-                    if (this.karbonite < 10) {
-                        return
-                    }
-                    this.num_pilgrims++
-                    var karb_x_bin = this.nearest_karb[0].toString(2)
-                    var karb_y_bin = this.nearest_karb[1].toString(2)
-                    var zeros = ""
-                    if (karb_x_bin.length < 6) {
-                        for (var i = 0; i < 6 - karb_x_bin.length; i++) {
-                            zeros = zeros + "0"
+                        this.num_pilgrims++
+                        var karb_x_bin = this.nearest_karb[0].toString(2)
+                        var karb_y_bin = this.nearest_karb[1].toString(2)
+                        var zeros = ""
+                        if (karb_x_bin.length < 6) {
+                            for (var i = 0; i < 6 - karb_x_bin.length; i++) {
+                                zeros = zeros + "0"
+                            }
                         }
-                    }
-                    karb_x_bin = zeros + karb_x_bin
+                        karb_x_bin = zeros + karb_x_bin
 
-                    var zeros = ""
-                    if (karb_y_bin.length < 6) {
-                        for (var i = 0; i < 6 - karb_y_bin.length; i++) {
-                            zeros = zeros + "0"
+                        var zeros = ""
+                        if (karb_y_bin.length < 6) {
+                            for (var i = 0; i < 6 - karb_y_bin.length; i++) {
+                                zeros = zeros + "0"
+                            }
                         }
-                    }
-                    karb_y_bin = zeros + karb_y_bin
+                        karb_y_bin = zeros + karb_y_bin
 
-                    var message = "1000" + karb_x_bin + karb_y_bin
-                    this.signal(parseInt(message, 2), 2)
-                    return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                }
-
-                var units = this.getVisibleRobots()
-                var count = 0
-                for (var i in units) {
-                    if (units[i].unit === SPECS.PROPHET) {
-                        count++
+                        var message = "1000" + karb_x_bin + karb_y_bin
+                        this.signal(parseInt(message, 2), 2)
+                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
 
-                }
-                if (count < 3 && this.karbonite >= 30) {
-                    var message = "10000"
-                    this.signal(parseInt(message, 2), 2)
-                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                } 
+                    var units = this.getVisibleRobots()
+                    var count = 0
+                    for (var i in units) {
+                        if (units[i].unit === SPECS.PROPHET) {
+                            count++
+                        }
 
-                if (count >= 3){
-                    this.wait_rounds_for_others --
-                }
+                    }
+                    if (count < 3 && this.karbonite >= 30) {
+                        var message = "10000"
+                        this.signal(parseInt(message, 2), 2)
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    } 
 
-                if (this.karbonite >= 35 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
-                    this.num_prophets++
-                    this.produce_prophet = 6
-                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    if (count >= 3){
+                        this.wait_rounds_for_others --
+                    }
 
+                    if (this.karbonite >= 35 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
+                        this.num_prophets++
+                        this.produce_prophet = 6
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+
+                    }
                 }
             }
             return
