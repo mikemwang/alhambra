@@ -1023,7 +1023,7 @@ class MyRobot extends BCAbstractRobot {
                                 break
                             }
                         }
-                        this.log ("NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
+                        this.log ("CASTLE NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
                         return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                     }
                     if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
