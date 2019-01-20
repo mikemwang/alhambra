@@ -226,39 +226,34 @@ export class BaseBot extends BCAbstractRobot{
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
                 var choices = this.random_ordering(this.mvmt_choices)
-                var i = 0;
-                for (i in choices){
-                    this.log('cur_path:'+cur_path)
+                for (var i in choices){
                     this.log('cur_path:'+cur_path[cur_path.length-1])
-                    this.log('choices'+choices)
                     this.log('choices'+choices[i])
-                    if (choices[i]){
-                      var newx = cur_path[cur_path.length-1][0] + choices[i][0]
-                      var newy = cur_path[cur_path.length-1][1] + choices[i][1]
-                      if (cur_path.length == 1){
-                          if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
-                              if (!this.used_map[newy][newx]){
-                                  this.used_map[newy][newx] = true
-                                  var newpath = cur_path.slice(0, cur_path.length)
-                                  newpath.push([newx, newy])
-                                  if (newx == x && newy == y) {
-                                      return newpath.slice(1)
-                                  }
-                                  new_paths.push(newpath)
-                              }
-                          }
-                      }
-                      else if (this.in_bounds(newx, newy) && this.map[newy][newx]){
-                          if (!this.used_map[newy][newx]){
-                              this.used_map[newy][newx] = true
-                              var newpath = cur_path.slice(0, cur_path.length)
-                              newpath.push([newx, newy])
-                              if (newx == x && newy == y) {
-                                  return newpath.slice(1)
-                              }
-                              new_paths.push(newpath)
-                          }
-                      }
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+                    if (cur_path.length == 1){
+                        if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
+                            if (!this.used_map[newy][newx]){
+                                this.used_map[newy][newx] = true
+                                var newpath = cur_path.slice(0, cur_path.length)
+                                newpath.push([newx, newy])
+                                if (newx == x && newy == y) {
+                                    return newpath.slice(1)
+                                }
+                                new_paths.push(newpath)
+                            }
+                        }
+                    }
+                    else if (this.in_bounds(newx, newy) && this.map[newy][newx]){
+                        if (!this.used_map[newy][newx]){
+                            this.used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            if (newx == x && newy == y) {
+                                return newpath.slice(1)
+                            }
+                            new_paths.push(newpath)
+                        }
                     }
                 }
             }
