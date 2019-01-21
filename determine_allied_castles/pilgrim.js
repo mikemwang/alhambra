@@ -68,11 +68,9 @@ export class Pilgrim{
 
             if (this.karb_bot){
                 this.target_karb = path[path.length-1]
-                this.r.log("I am a KARB bot")
             }
             else {
                 this.target_fuel = path[path.length-1]
-                this.r.log("I am a FUEL bot")
             }
             this.target_resource = this.karb_bot ? this.target_karb : this.target_fuel
         }

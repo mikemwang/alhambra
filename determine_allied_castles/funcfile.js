@@ -275,19 +275,27 @@ export class Allied_Castle_Finder{
         this.allied_castle_list = []
         this.done = false
         this.enemy_castle_list = []
+        this.castle_turn_order = 0
+        this.num_castles = 1
     }
-    find(units){
+    find(units, sym){
         if (this.done){
             return
         }
         if (this.phase == 0){
             this.allied_castles[this.r.me.id] = [this.r.me.x, this.r.me.y]
+            for (var i in units){
+                if (units[i].id != this.r.me.id && units[i].castle_talk != 0){
+                    this.castle_turn_order ++
+                }
+            }
             this.r.castleTalk(this.r.me.x + 1)
         } else if (this.phase == 1){
             this.r.castleTalk(this.r.me.x + 1)
             for (var i in units){
                 if (units[i].id != this.r.me.id && units[i].castle_talk != 0){
                     this.allied_castles[units[i].id] = [units[i].castle_talk - 1, 0]
+                    this.num_castles ++
                 }
             }
         } else if (this.phase == 2){
@@ -307,18 +315,20 @@ export class Allied_Castle_Finder{
 
             for (var i in this.allied_castle_list){
                 var opposite_castle = []
-                var mirror_coord = this.allied_castle_list[i][0]
-                if (this.sym == 'y'){
-                    mirror_coord = this.allied_castle_list[i][1]
+                var mirror_coord = this.allied_castle_list[i][1]
+                if (sym == 'y'){
+                    mirror_coord = this.allied_castle_list[i][0]
                 }
                 mirror_coord = (this.r.map.length - this.r.map.length%2)-mirror_coord + ((this.r.map.length%2) - 1)
-                if (this.sym == 'y'){
+
+                if (sym == 'y'){
                     opposite_castle = [mirror_coord, this.allied_castle_list[i][1]]
                 } else {
                     opposite_castle = [this.allied_castle_list[i][0], mirror_coord]
                 }
                 this.enemy_castle_list.push(opposite_castle.slice())
             }
+
             this.done = true
         }
         this.phase ++
