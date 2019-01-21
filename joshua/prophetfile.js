@@ -30,6 +30,7 @@ class Prophet{
                 robot.nearest_enemy_castle = [robot.me.x, mirror_coord]
             }
             robot.enemy_castles.push(robot.nearest_enemy_castle)
+            // robot.log('my ecastles list' + robot.enemy_castles)
         }
 
         // find the closest enemy castle
@@ -37,12 +38,15 @@ class Prophet{
         var path_to_enemy_castle = []
         if (robot.enemy_castles.length >= 1){
             for (var i in robot.enemy_castles){
-                var path = robot.bfs(robot.me.x, robot.me.y, robot.enemy_castles[i][0], robot.enemy_castles[i][1])
-                if (path != null && path.length < closest_d){
-                    closest_d = path.length
-                    robot.nearest_enemy_castle = robot.enemy_castles[i]
-                    path_to_enemy_castle = path
-                }
+              robot.log('enemy castles for prophet: '+robot.enemy_castles)
+              if (robot.enemy_castles[i]){
+              var path = robot.bfs(robot.me.x, robot.me.y, robot.enemy_castles[i][0], robot.enemy_castles[i][1])
+                  if (path != null && path.length < closest_d){
+                      closest_d = path.length
+                      robot.nearest_enemy_castle = robot.enemy_castles[i]
+                      path_to_enemy_castle = path
+                  }
+              }
             }
         }
         // // move to front line (facing enemy castle)

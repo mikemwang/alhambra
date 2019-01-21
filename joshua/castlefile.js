@@ -2,7 +2,21 @@ import {SPECS} from 'battlecode'
 
 class Castle{
     turn(robot){
+        robot.log('checking castle_talk: ' + (4 in robot.occupied_castle_talk_turn))
+        var units = robot.getVisibleRobots()
+        // robot.allied_castle_finder.find(units)
+        if(robot.me.turn <= 4){
+          robot.friendly_castles(units)
+        }
+        if (robot.me.turn == 4){
+          robot.enemy_castles(units)
+          robot.log('enemy_castles: '+robot.enemy_castles_list)
+        }
+        robot.log('my castles: ')
+        robot.log(robot.my_castles)
         robot.log('castle step: '+robot.step)
+        robot.log('castle coord: '+robot.me.x + ','+ robot.me.y)
+        // robot.log()
         if (robot.step == 0){
             robot.sym = robot.find_sym(robot.map)
             var x_start = 0
@@ -14,14 +28,11 @@ class Castle{
             robot.determine_bounds(x_start, x_bound, y_start, y_bound);
             robot.determine_nearest_karb(x_start, x_bound, y_start, y_bound, best_dist);
             robot.determine_nearest_fuel(x_start, x_bound, y_start, y_bound, best_dist);
-            robot.log('nearest karb:'+robot.nearest_karb)
-            robot.log('nearest fuel:'+robot.nearest_fuel)
 
-            robot.castleTalk(Math.min(255, best_dist))
+            // robot.castleTalk(Math.min(255, best_dist))
             robot.num_castles = robot.getVisibleRobots().length
 
             // find corresponding enemy castle
-            robot.determine_opp_castle();
 
             // check if other castles have published //determines the maincastle
             var units = robot.getVisibleRobots()
@@ -98,8 +109,7 @@ class Castle{
             }
         } else {
             robot.log('entered else loop')
-            robot.log('Visible robots: ')
-            robot.log(robot.getVisibleRobots())
+            // robot.log(robot.getVisibleRobots())
             //if (robot.maincastle && (robot.num_pilgrims < 1 && robot.nearest_karb_d < 3 || robot.num_pilgrims < 2 && robot.nearest_karb_d >= 3)){
             // if (!robot.maincastle){
             //     return
