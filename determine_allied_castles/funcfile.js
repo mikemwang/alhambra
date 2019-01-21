@@ -88,7 +88,26 @@ export class BaseBot extends BCAbstractRobot{
         return 'x'
     }
 
-    flood_fill(startx, starty, find_karb=true, occupied_list = []) {
+    flood_fill(startx, starty, find_karb=true, occupied_list = [], sym) {
+        this.log((find_karb && this.karbonite_map[starty][startx]))
+        this.log((!find_karb && this.fuel_map[starty][startx]))
+        if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
+        if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
+
+        var l = this.map.length
+        var xbounds = []
+        var ybounds = []
+        if (sym == 'x'){
+            xbounds = [0, l-1]
+            if (this.me.y < l/2) ybounds = [0, Math.floor(l/2)]
+            else ybounds = [Math.floor(l/2), l-1]
+
+        } else{
+            ybounds = [0, l-1]
+            if (this.me.x < l/2) xbounds = [0, Math.floor(l/2)]
+            else xbounds = [Math.floor(l/2), l-1]
+        }
+
         var paths = [[[startx, starty]]]
 
         var used_map = []
@@ -110,6 +129,8 @@ export class BaseBot extends BCAbstractRobot{
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+                    if (newx < xbounds[0] || newx > xbounds[1]) continue
+                    if (newy < ybounds[0] || newy > ybounds[1]) continue
                     if (this.traversable(newx, newy, visible_robot_map)){
                         var valid = true
                         for (var k in occupied_list){
@@ -222,7 +243,7 @@ export class BaseBot extends BCAbstractRobot{
 
     traversable(x, y, visible_robot_map) {
         // check if a square is in bounds, not terrain, and not occupied
-        return (this.in_bounds(x, y) && this.map[y][x] && visible_robot_map[y][x] <= 0)
+        return (this.in_bounds(x, y) && this.map[y][x] && visible_robot_map[y][x] <= 0 && visible_robot_map[y][x] != this.me.id)
     }
 
 }

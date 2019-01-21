@@ -13,7 +13,7 @@ export class Castle{
         this.enemy_castle_list = null
         this.sym = null
         this.r = r
-        this.built = false
+        this.built = 0
     }
 
     turn(){
@@ -33,10 +33,10 @@ export class Castle{
             this.enemy_castle_list = this.r.allied_castle_finder.enemy_castle_list.slice()
         }
 
-        this.r.signal(255, 65)
-        if (this.r.karbonite >= 10 && this.r.fuel >= 50 && !this.built){
+        //this.r.signal(255, 65)
+        if (this.r.karbonite >= 10 && this.r.fuel >= 50 && this.built < 2){
             this.r.log("building pilgrim")
-            this.built = true
+            this.built ++
             return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
         }
 
