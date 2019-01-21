@@ -187,7 +187,6 @@ class MyRobot extends BCAbstractRobot {
     confirm_robot_existence(aRobot){
         try {
             aRobot.id
-            this.log("castle exists")
             return true
         } catch(TypeError) {
             return false
@@ -197,7 +196,6 @@ class MyRobot extends BCAbstractRobot {
     deposit_to_castle(myRobot, myCastle){
         if (this.confirm_robot_existence(myCastle) === true && this.is_adjacent(myRobot.x, myRobot.y, myCastle.x, myCastle.y)){
             if (myRobot.fuel > 0 || myRobot.karbonite > 0) {
-                this.log("Depositing karbonite: " + myRobot.karbonite + " fuel: " + myRobot.fuel)
                 return this.give ((myCastle.x - this.me.x), (myCastle.y-this.me.y), myRobot.karbonite, myRobot.fuel)
             }
         }
@@ -239,7 +237,6 @@ class MyRobot extends BCAbstractRobot {
                             break
                         }
                     }
-                    this.log ("NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
                     return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                 }
                 if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
@@ -283,11 +280,9 @@ class MyRobot extends BCAbstractRobot {
                         this.enemy_castles = []
                         path_to_enemy_castle = null
                         this.killed_enemy = true
-                        this.log("nearest enemy castle is gone")
                     }
                 }
             } else if (this.confirm_robot_existence(this.origin_castle) == true && this.at_home == false) {
-                this.log("returning to my origin castle")
                 path_to_origin_castle= this.bfs(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y, true)
                 if (this.is_adjacent(this.me.x, this.me.y, this.origin_castle.x, this.origin_castle.y) == true) {
                     this.at_home = true
@@ -307,16 +302,12 @@ class MyRobot extends BCAbstractRobot {
             }
 
             if(path_to_enemy_castle!== null && this.killed_enemy ==false){ // if enemy castle still exists, attack
-                this.log ("Attacking the enemy!!")
                 return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
             } else if (this.at_home == true && this.homeless == false) { //if near castle and castle exists, do nothing
                 return
             } else if (this.confirm_robot_existence(this.origin_castle) == true && path_to_origin_castle !== null) { 
-                this.log("PATH: " + path_to_origin_castle)
-                this.log("Returning Home")
                 return this.move(path_to_origin_castle[0][0] - this.me.x, path_to_origin_castle[0][1]-this.me.y)
             } else if (this.homeless == false && this.confirm_robot_existence(this.origin_castle) == false) {
-                this.log("i'm homeless q_q")
                 this.homeless = true
                 return
             } 
@@ -414,7 +405,6 @@ class MyRobot extends BCAbstractRobot {
         
             if (at_current_karb != 0 && at_current_karb != -1 && this.flag == false && at_current_karb != this.me.id){
                 this.counter ++
-                this.log(this.counter)
             }
             else {
                 this.counter = 0
@@ -426,10 +416,8 @@ class MyRobot extends BCAbstractRobot {
                 this.determine_nearest_karb(this.me.x - this.search_range, this.me.x + this.search_range, this.me.y - this.search_range, this.me.y + this.search_range, best_dist)
                 if(old_karb === this.nearest_karb){
                     this.search_range ++
-                    this.log("Failed, looking again")
                 }
                 else{
-                    this.log("Switched karb dep")
                     this.log(this.nearest_karb)
                 }
             }
