@@ -11,6 +11,7 @@ export class Castle{
                                 [1.54, 1.54, 1.54, 1.54, 1.54]]
         this.allied_castle_list = null
         this.castle_turn_order = null
+        this.defensive_build = null
         this.economy = true
         this.enemy_castle_list = null
         this.num_finished_econ = 0
@@ -27,6 +28,7 @@ export class Castle{
     }
 
     turn(step){
+        this.defensive_build = null
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
         }
@@ -70,8 +72,6 @@ export class Castle{
                         this.num_finished_econ ++
                     }
                 }
-                this.r.log(this.num_finished_econ)
-                this.r.log((90 + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25))
                 if (this.r.karbonite >=(90 + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
                     this.r.castleTalk(255)
                     this.synced_build = true
@@ -85,6 +85,32 @@ export class Castle{
             }
         }
 
+        var atk_loc = null
+        for (var i in units){
+            if (units[i].team != this.r.me.team){
+                atk = [units[i].x, units[i].y]
+                if (units[i].unit == SPECS.CRUSADER){
+                    this.defensive_build = SPECS.PREACHER
+                }
+                if (units[i].unit == SPECS.PROPHET){
+                    this.defensive_build = SPECS.PROPHET
+                }
+                if (units[i].unit == SPECS.PREACHER){
+                    this.defensive_build = SPECS.PREACHER
+                }
+            }
+        }
+        
+        if (this.defensive_build != null){
+            this.r.castleTalk(253)
+            if (this.r.karbonite <= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
+                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+            if (this.r.r_squared(this.r.me.x, this.r.me.y, ...atk_loc) <= 64){
+                return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
+            }
+        }
+
         if (this.synced_build){
             this.synced_build = false
             if (this.economy){
@@ -93,7 +119,6 @@ export class Castle{
                     this.economy = false
                     if (this.castle_turn_order != 0) this.r.castleTalk(254)
                     this.num_finished_econ ++
-                    this.r.log("finished econ")
                 }
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             } else {
