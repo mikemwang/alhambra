@@ -88,7 +88,7 @@ export class Castle{
         var atk_loc = null
         for (var i in units){
             if (units[i].team != this.r.me.team){
-                atk = [units[i].x, units[i].y]
+                atk_loc = [units[i].x, units[i].y]
                 if (units[i].unit == SPECS.CRUSADER){
                     this.defensive_build = SPECS.PREACHER
                 }
@@ -103,7 +103,7 @@ export class Castle{
         
         if (this.defensive_build != null){
             this.r.castleTalk(253)
-            if (this.r.karbonite <= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
+            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
                 return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
             if (this.r.r_squared(this.r.me.x, this.r.me.y, ...atk_loc) <= 64){
