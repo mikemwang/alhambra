@@ -80,6 +80,7 @@ class MyRobot extends BCAbstractRobot {
         this.karb_miner = true;
         this.inital_pilgrims = 3
         this.num_pilgrims = 0
+        this.castle_coords = null
     }
 
     in_bounds(x, y) {
@@ -581,7 +582,6 @@ class MyRobot extends BCAbstractRobot {
                 this.log("adopting strategy 0")
                 this.store_origin_castle()
                 var units = this.attack_priority(this.getVisibleRobots())
-                var castle_coords = null
                 for (var i in units){
                     if (units[i].team != this.me.team){
                         var enemy_unit = [units[i].x, units[i].y]
@@ -604,7 +604,7 @@ class MyRobot extends BCAbstractRobot {
                         return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                     }
                     if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
-                        castle_coords = [units[i].x, units[i].y]     
+                        this.castle_coords = [units[i].x, units[i].y]     
                     }
                 }
 
@@ -686,7 +686,6 @@ class MyRobot extends BCAbstractRobot {
                 this.log("my strategy is: " + this.strategy)
                 var blocking = false
                 var units = this.getVisibleRobots()
-                var castle_coords = null
                 for (var i in units) {
                     if (units[i].team != this.me.team) {
                         var enemy_unit = [units[i].x, units[i].y]
@@ -709,7 +708,7 @@ class MyRobot extends BCAbstractRobot {
                     }
 
                     if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
-                        castle_coords = [units[i].x, units[i].y]
+                        this.castle_coords = [units[i].x, units[i].y]
                     }
                     if (this.isRadioing(units[i])) {
                         if (units[i].signal.toString(2).slice(0, 4) == "1111") {
@@ -741,7 +740,7 @@ class MyRobot extends BCAbstractRobot {
 
 
                 // no adjacent to prevent splash
-                if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))) {
+                if (blocking || (this.castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...this.castle_coords))) {
                     if (path_to_enemy_castle.length > 0) {
                         return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                     } else {
@@ -808,12 +807,11 @@ class MyRobot extends BCAbstractRobot {
                 if (this.defensive_flag === true) {
                     var blocking = false
                     var units = this.getVisibleRobots()
-                    var castle_coords = null
                     for (var i in units) {
                         this.attack_acc_for_friendly(units, i);
 
                         if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
-                            castle_coords = [units[i].x, units[i].y]
+                            this.castle_coords = [units[i].x, units[i].y]
                         }
                         if (this.isRadioing(units[i])) {
                             if (units[i].signal.toString(2).slice(0, 4) == "1111") {
@@ -848,7 +846,7 @@ class MyRobot extends BCAbstractRobot {
                         return this.move(path_to_enemy_castle[0][0] - this.me.x, path_to_enemy_castle[0][1] - this.me.y)
                     }
 
-                    if (blocking || (castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...castle_coords))){
+                    if (blocking || (this.castle_coords != null && this.is_adjacent(this.me.x, this.me.y, ...this.castle_coords))){
                         //if (blocking || this.is_something_else_adjacent([this.me.x, this.me.y])){
                             if (path != null){
                                 this.log("i'm going to gtfo")
@@ -876,7 +874,6 @@ class MyRobot extends BCAbstractRobot {
                     var blocking = false
                     var units = this.attack_priority(this.getVisibleRobots(), [4, 5, 2, 0, 1, 3])
                     var pilgrim_coords = null
-                    var castle_coords = null
                     var path_to_origin_castle = []
                     this.store_origin_castle()
                     for (var i in units) {
@@ -884,19 +881,25 @@ class MyRobot extends BCAbstractRobot {
                             var enemy_unit = [units[i].x, units[i].y]
                             return this.attack(enemy_unit[0] - this.me.x, enemy_unit[1] - this.me.y)
                         }
-                        if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
-                            castle_coords = [units[i].x, units[i].y]
+                        if (units[i].unit == 0 && units[i].team == this.me.team) {
+                            this.castle_coords = [units[i].x, units[i].y]
+                            this.log("castle_coords modified 886")
                         }
-                        if (blocking ||  this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
-                            if (path != null){
-                                this.log("i'm going to gtfo")
-                                return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
-                            } else {
-                                this.log("i signaled gtfo")
-                                this.signal(parseInt("1111000000000000", 2), 8)
-                            }
+                        this.log("line 887")
+                        this.log("castle_coords: " + this.castle_coords)
+                    }
+
+                    if (blocking ||  this.is_adjacent(this.me.x, this.me.y, ...this.castle_coords)){
+                        if (path != null){
+                            this.log("i'm going to gtfo")
+                            return this.move(path[0][0] - this.me.x, path[0][1] - this.me.y)
+                        } else {
+                            this.log("i signaled gtfo")
+                            this.signal(parseInt("1111000000000000", 2), 8)
                         }
                     }
+                    this.log("line 897")
+
 
                     var units = this.getVisibleRobots()
                     var count = 0
@@ -908,7 +911,7 @@ class MyRobot extends BCAbstractRobot {
 
                     // start populating the enemy castle list
                     if (this.enemy_castles.length == 0 && this.killed_enemy == false) {
-                        this.sym = thisfind_sym(this.map)
+                        this.sym = this.find_sym(this.map)
                         this.nearest_enemy_castle = this.determine_opp_location(this.me.x, this.me.y, this.sym)
                         this.enemy_castles.push(this.nearest_enemy_castle)
                     }
@@ -1203,7 +1206,6 @@ class MyRobot extends BCAbstractRobot {
                     this.log("CASTLE TAKING STRATEGY FOR 1")
                     this.signal(13, 10)
                     var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2])
-                    var castle_coords = null
                     for (var i in units){
                         if (units[i].team != this.me.team){
                             var enemy_unit = [units[i].x, units[i].y]
@@ -1227,7 +1229,7 @@ class MyRobot extends BCAbstractRobot {
                         }
                         this.log("reached line 1228")
                         if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
-                            castle_coords = [units[i].x, units[i].y]     
+                            this.castle_coords = [units[i].x, units[i].y]     
                         }
                     }
 
@@ -1242,7 +1244,7 @@ class MyRobot extends BCAbstractRobot {
                     }
 
                     this.produce_prophet--
-                    this.log("got to line 1243")
+/*                    this.log("got to line 1243")
                     if (this.num_pilgrims < this.inital_pilgrims) {
                         this.log("entered pilgrim building code")
                         if (this.karbonite < 10) {
@@ -1273,7 +1275,7 @@ class MyRobot extends BCAbstractRobot {
                         this.signal(parseInt(message, 2), 2)
 
                         return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                        if (this.num_pilgrims_karbs < this.inital_pilgrims_karbs) {
+*/                        if (this.num_pilgrims_karbs < this.inital_pilgrims_karbs) {
                             this.num_pilgrims_karbs ++
                             var message = "10001111"
                             this.signal(parseInt(message, 2), 2)
@@ -1286,8 +1288,8 @@ class MyRobot extends BCAbstractRobot {
                             this.signal(parseInt(message, 2), 2)
                             return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                         }
-                    }
-
+/*                    }
+*/
                     var units = this.getVisibleRobots()
                     var count = 0
                     for (var i in units) {
