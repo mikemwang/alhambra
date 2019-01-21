@@ -819,6 +819,7 @@ class MyRobot extends BCAbstractRobot {
             this.robot_check_strategy();
             if (this.strategy == 0) {
                 // find the nearest allied castle
+                this.log("adopting strategy 0");
                 this.store_origin_castle();
                 var units = this.attack_priority(this.getVisibleRobots());
                 var castle_coords = null;
@@ -920,10 +921,9 @@ class MyRobot extends BCAbstractRobot {
                     this.homeless = true;
                     return
                 } 
-
-
             } else {
                 // find the nearest allied castle
+                this.log("my strategy is: " + this.strategy);
                 var blocking = false;
                 var units = this.getVisibleRobots();
                 var castle_coords = null;
@@ -1019,7 +1019,7 @@ class MyRobot extends BCAbstractRobot {
         if (this.me.unit === SPECS.PROPHET) {
             this.robot_check_strategy();
             this.log("PROPHET STRATEGY: " + this.strategy);
-            if (this.strategy == 1) {
+            if (this.strategy != 0) {
                 // find the nearest allied castle
                 var blocking = false;
 
@@ -1367,7 +1367,6 @@ class MyRobot extends BCAbstractRobot {
 
                 this.castleTalk(Math.min(255, best_dist));
                 this.num_castles = this.getVisibleRobots().length;
-
                 this.determine_strategy(20);
                 // check if other castles have published //determines the maincastle
 /*                var units = this.getVisibleRobots()
@@ -1390,6 +1389,9 @@ class MyRobot extends BCAbstractRobot {
 
                 */            
             } else if (step == 1) {
+                this.log("step #1 for castles");
+                this.castle_check_strategy();
+                return
 /*                if (this.maincastle == null) {
                     var units = this.getVisibleRobots()
                     if (units.length > this.num_castles) {
@@ -1410,14 +1412,6 @@ class MyRobot extends BCAbstractRobot {
                     this.castleTalk(255)
                 }
                 */              
-                this.log("step #1 for castles");
-                this.castle_check_strategy();
-                ///* PATH TESTING
-
-
-
-                //PATH TESTING*/                 
-                return
             }
 
             //// PATH TESTING
@@ -1445,6 +1439,7 @@ class MyRobot extends BCAbstractRobot {
                         return this.buildUnit(SPECS.PREACHER, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
                     }
                 } else if (this.strategy == 1) { 
+                    this.log("CASTLE TAKING STRATEGY FOR 1");
                     this.signal(13, 10);
                     var units = this.attack_priority(this.getVisibleRobots(), [0,1,4,5,3,2]);
                     var castle_coords = null;
@@ -1482,97 +1477,95 @@ class MyRobot extends BCAbstractRobot {
                                 this.killed_enemy = true;
                             }
                         }
+                    }
 
-                        this.produce_prophet--;
-                        if (this.num_pilgrims < this.inital_pilgrims) {
+                    this.produce_prophet--;
+                    if (this.num_pilgrims < this.inital_pilgrims) {
 
-                            if (this.karbonite < 10) {
-                                return
-                            }
-                            this.num_pilgrims++;
-                            var karb_x_bin = this.nearest_karb[0].toString(2);
-                            var karb_y_bin = this.nearest_karb[1].toString(2);
-                            var zeros = "";
-                            if (karb_x_bin.length < 6) {
-                                for (var i = 0; i < 6 - karb_x_bin.length; i++) {
-                                    zeros = zeros + "0";
-                                }
-                            }
-                            karb_x_bin = zeros + karb_x_bin;
-
-                            var zeros = "";
-                            if (karb_y_bin.length < 6) {
-                                for (var i = 0; i < 6 - karb_y_bin.length; i++) {
-                                    zeros = zeros + "0";
-                                }
-                            }
-                            karb_y_bin = zeros + karb_y_bin;
-
-                            var message = "1000" + karb_x_bin + karb_y_bin;
-                            this.signal(parseInt(message, 2), 2);
-                            return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                            if (this.num_pilgrims_karbs < this.inital_pilgrims_karbs) {
-                                this.num_pilgrims_karbs ++;
-                                var message = "10001111";
-                                this.signal(parseInt(message, 2), 2);
-                                return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                            }
-
-                            if(step > 50 && this.num_pilgrims_fuel < this.inital_pilgrims_fuel) {
-                                this.num_pilgrims_fuel ++;
-                                var message = "10001110";
-                                this.signal(parseInt(message, 2), 2);
-                                return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                            }
-
-
-
-                            var units = this.getVisibleRobots();
-                            var count = 0;
-                            for (var i in units) {
-                                if (units[i].unit === SPECS.PROPHET) {
-                                    count++;
-                                }
-
-                                var units = this.getVisibleRobots();
-                                var count = 0;
-                                for (var i in units) {
-                                    if (units[i].unit === SPECS.PROPHET) {
-                                        count++;
-                                    }
-
-                                }
-                                if (count < 3 && this.karbonite >= 30) {
-                                    var message = "10000";
-                                    this.signal(parseInt(message, 2), 2);
-                                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                                } 
-
-                                if (count >= 3){
-                                    this.wait_rounds_for_others --;
-                                }
-
-                                if (this.karbonite >= 35 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
-                                    this.num_prophets++;
-                                    this.produce_prophet = 6;
-                                    return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-                                    if (this.karbonite >= 10025 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
-                                        this.num_prophets++;
-                                        this.produce_prophet = 6;
-                                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
-
-                                    }
-                                }
-                            }
-
+                        if (this.karbonite < 10) {
                             return
                         }
+                        this.num_pilgrims++;
+                        var karb_x_bin = this.nearest_karb[0].toString(2);
+                        var karb_y_bin = this.nearest_karb[1].toString(2);
+                        var zeros = "";
+                        if (karb_x_bin.length < 6) {
+                            for (var i = 0; i < 6 - karb_x_bin.length; i++) {
+                                zeros = zeros + "0";
+                            }
+                        }
+                        karb_x_bin = zeros + karb_x_bin;
+
+                        var zeros = "";
+                        if (karb_y_bin.length < 6) {
+                            for (var i = 0; i < 6 - karb_y_bin.length; i++) {
+                                zeros = zeros + "0";
+                            }
+                        }
+                        karb_y_bin = zeros + karb_y_bin;
+
+                        var message = "1000" + karb_x_bin + karb_y_bin;
+                        this.signal(parseInt(message, 2), 2);
+                        return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                        if (this.num_pilgrims_karbs < this.inital_pilgrims_karbs) {
+                            this.num_pilgrims_karbs ++;
+                            var message = "10001111";
+                            this.signal(parseInt(message, 2), 2);
+                            return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                        }
+
+                        if(step > 50 && this.num_pilgrims_fuel < this.inital_pilgrims_fuel) {
+                            this.num_pilgrims_fuel ++;
+                            var message = "10001110";
+                            this.signal(parseInt(message, 2), 2);
+                            return this.buildUnit(SPECS.PILGRIM, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                        }
                     }
+
+                    var units = this.getVisibleRobots();
+                    var count = 0;
+                    for (var i in units) {
+                        if (units[i].unit === SPECS.PROPHET) {
+                            count++;
+                        }
+                    }
+
+                    if (count < 3 && this.karbonite >= 30) {
+                        var message = "10000";
+                        this.signal(parseInt(message, 2), 2);
+                        this.log("built a prophet line 1308");
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    } 
+
+                    if (count >= 3){
+                        this.wait_rounds_for_others --;
+                    }
+
+                    if (this.karbonite >= 25 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
+                        this.num_prophets++;
+                        this.produce_prophet = 6;
+                        this.log("built a prophet line 1319");
+                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+                    }
+
+/*                                if (this.karbonite >= 10025 && this.produce_prophet < 0 && this.wait_rounds_for_others < 0 && this.killed_enemy === false) {
+                                        this.num_prophets++
+                                        this.produce_prophet = 6
+                                        this.log("built a prophet")
+                                        return this.buildUnit(SPECS.PROPHET, ...this.find_free_adjacent_tile(this.me.x, this.me.y));
+
+                                    }*/
+
                 }
+
+                return
             }
+
+
         }
     }
 }
+        
 
 var robot = new MyRobot();
 var robot = new MyRobot();

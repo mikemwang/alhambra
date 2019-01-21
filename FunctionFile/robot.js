@@ -601,7 +601,7 @@ class MyRobot extends BCAbstractRobot {
                         this.log ("NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
                         return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                     }
-                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                    if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
                         castle_coords = [units[i].x, units[i].y]     
                     }
                 }
@@ -706,7 +706,7 @@ class MyRobot extends BCAbstractRobot {
                         return this.attack(enemy_unit[0] - this.me.x, enemy_unit[1] - this.me.y)
                     }
 
-                    if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                    if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
                         castle_coords = [units[i].x, units[i].y]
                     }
                     if (this.isRadioing(units[i])) {
@@ -810,7 +810,7 @@ class MyRobot extends BCAbstractRobot {
                     for (var i in units) {
                         this.attack_acc_for_friendly(units, i);
 
-                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                        if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
                             castle_coords = [units[i].x, units[i].y]
                         }
                         if (this.isRadioing(units[i])) {
@@ -882,7 +882,7 @@ class MyRobot extends BCAbstractRobot {
                             var enemy_unit = [units[i].x, units[i].y]
                             return this.attack(enemy_unit[0] - this.me.x, enemy_unit[1] - this.me.y)
                         }
-                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                        if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
                             castle_coords = [units[i].x, units[i].y]
                         }
                         if (blocking ||  this.is_adjacent(this.me.x, this.me.y, ...castle_coords)){
@@ -1223,7 +1223,7 @@ class MyRobot extends BCAbstractRobot {
                             this.log ("CASTLE NOW ATTACKING: " + (enemy_unit[0]-this.me.x) + " " + (enemy_unit[1]-this.me.y))
                             return this.attack(enemy_unit[0]-this.me.x, enemy_unit[1]-this.me.y)
                         }
-                        if (units[i].unit == SPECS.CASTLE && units[i].unit == this.me.team) {
+                        if (units[i].unit == SPECS.CASTLE && units[i].team == this.me.team) {
                             castle_coords = [units[i].x, units[i].y]     
                         }
                     }
