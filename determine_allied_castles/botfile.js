@@ -1,13 +1,16 @@
 import {SPECS} from 'battlecode'
+import {Castle} from 'castle.js'
+import {Pilgrim} from 'pilgrim.js'
+import {Prophet} from 'prophet.js'
 
-class Castle{
-    turn(robot){
-        robot.log("I AM CASTLE")
+export function create_bot(bot){
+    if (bot.me.unit === SPECS.CASTLE){
+        return new Castle(bot)
     }
-}
-
-export function create_bot(num){
-    if (num === SPECS.CASTLE){
-        return new Castle()
+    if (bot.me.unit === SPECS.PILGRIM){
+        return new Pilgrim(bot)
+    }
+    if (bot.me.unit === SPECS.PROPHET){
+        return new Prophet(bot)
     }
 }
