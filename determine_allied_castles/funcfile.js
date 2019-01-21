@@ -4,10 +4,9 @@ export class BaseBot extends BCAbstractRobot{
     constructor(){
         super();
         this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
-                             [-1,-0],        , [+1, 0],
+                             [-1,-0],          [+1, 0],
                              [-1,+1], [+0,+1], [+1, +1]]
-        this.used_map = null
-        this.allied_castle_finder = new Allied_Castle_Finder()
+        this.allied_castle_finder = null
     }
 
     bfs(startx, starty, x, y, ignore_goal=false) {
@@ -26,6 +25,7 @@ export class BaseBot extends BCAbstractRobot{
 
         var paths = [[[startx, starty]]]
 
+        var used_map = []
         for (var i = 0; i < this.map.length; i++){
             used_map[i] = []
             for (var j = 0; j<  this.map.length; j++){
@@ -86,6 +86,58 @@ export class BaseBot extends BCAbstractRobot{
             }
         }
         return 'x'
+    }
+
+    flood_fill(startx, starty, find_karb=true, occupied_list = []) {
+        var paths = [[[startx, starty]]]
+
+        var used_map = []
+        for (var i = 0; i < this.map.length; i++){
+            used_map[i] = []
+            for (var j = 0; j<  this.map.length; j++){
+                used_map[i][j] = false
+            }
+        }
+
+        used_map[starty][startx] = true
+        var visible_robot_map = this.getVisibleRobotMap()
+
+        while (paths.length > 0){
+            var new_paths = []
+            while (paths.length > 0){
+                var cur_path = paths.shift()  // get the path in the beginning
+                var choices = this.random_ordering(this.mvmt_choices)
+                for (var i in choices){
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+                    if (this.traversable(newx, newy, visible_robot_map)){
+                        var valid = true
+                        for (var k in occupied_list){
+                            if (newx == occupied_list[i][0] && newy == occupied_list[i][1]){
+                                valid = false 
+                                break
+                            }
+                        }
+                        if (!valid) used_map[newy][newx] = true
+
+                        if (!used_map[newy][newx]){
+                            used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+
+                            if (find_karb ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
+                                return newpath.slice(1)
+                            }
+                            new_paths.push(newpath)
+                        }
+                    }
+                }
+            }
+            if (new_paths.length > 0) {
+                paths = new_paths.slice()
+            }
+        }
+        return null
     }
 
     in_bounds(x, y) {
@@ -175,40 +227,41 @@ export class BaseBot extends BCAbstractRobot{
 
 }
 
-class Allied_Castle_Finder{
+export class Allied_Castle_Finder{
     /*
     call find() every turn
     on the 4th turn, it will know all the allied castles. this.done will be true
     this.allied_castle_list is a list of all allied castles, sorted by castle ID
     so all castles have the same list, in the same order
     */
-    constructor(myrobot){
-        this.myrobot = myrobot
+    constructor(r){
+        this.r = r
         this.phase = 0
         this.allied_castles = {}
         this.allied_castle_list = []
         this.done = false
+        this.enemy_castle_list = []
     }
     find(units){
         if (this.done){
             return
         }
         if (this.phase == 0){
-            this.allied_castles[this.myrobot.me.id] = [this.myrobot.me.x, this.myrobot.me.y]
-            this.myrobot.castleTalk(this.myrobot.me.x + 1)
+            this.allied_castles[this.r.me.id] = [this.r.me.x, this.r.me.y]
+            this.r.castleTalk(this.r.me.x + 1)
         } else if (this.phase == 1){
-            this.myrobot.castleTalk(this.myrobot.me.x + 1)
+            this.r.castleTalk(this.r.me.x + 1)
             for (var i in units){
-                if (units[i].id != this.myrobot.me.id && units[i].castle_talk != 0){
+                if (units[i].id != this.r.me.id && units[i].castle_talk != 0){
                     this.allied_castles[units[i].id] = [units[i].castle_talk - 1, 0]
                 }
             }
         } else if (this.phase == 2){
-            this.myrobot.castleTalk(this.myrobot.me.y + 1)
+            this.r.castleTalk(this.r.me.y + 1)
         } else if (this.phase == 3){
-            this.myrobot.castleTalk(this.myrobot.me.y + 1)
+            this.r.castleTalk(this.r.me.y + 1)
             for (var i in units){
-                if (units[i].id != this.myrobot.me.id && units[i].castle_talk != 0){
+                if (units[i].id != this.r.me.id && units[i].castle_talk != 0){
                     this.allied_castles[units[i].id][1] = units[i].castle_talk - 1
                 }
             }
@@ -216,6 +269,21 @@ class Allied_Castle_Finder{
             keys.sort()
             for (var i in keys){
                 this.allied_castle_list.push(this.allied_castles[keys[i]])
+            }
+
+            for (var i in this.allied_castle_list){
+                var opposite_castle = []
+                var mirror_coord = this.allied_castle_list[i][0]
+                if (this.sym == 'y'){
+                    mirror_coord = this.allied_castle_list[i][1]
+                }
+                mirror_coord = (this.r.map.length - this.r.map.length%2)-mirror_coord + ((this.r.map.length%2) - 1)
+                if (this.sym == 'y'){
+                    opposite_castle = [mirror_coord, this.allied_castle_list[i][1]]
+                } else {
+                    opposite_castle = [this.allied_castle_list[i][0], mirror_coord]
+                }
+                this.enemy_castle_list.push(opposite_castle.slice())
             }
             this.done = true
         }
