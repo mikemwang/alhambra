@@ -16,13 +16,16 @@ export class Castle{
         this.defended_rush = false
         this.economy = true
         this.enemy_castle_list = null
+        this.latest_possible_rush = 25
         this.num_finished_econ = 0
         this.num_castles = null
         this.num_units = [0,0,0,0,0,0]
         this.max_pilgrim_range = 5
         this.r = r
         this.synced_build = false
+        this.synced_build_rush = false
         this.resource_saturation = null
+        this.rush_castle = false
         this.rush_distance = null
         this.sym = null
         this.last_hp = null
@@ -53,13 +56,18 @@ export class Castle{
             this.castle_turn_order = this.r.allied_castle_finder.castle_turn_order
             this.num_castles = this.r.allied_castle_finder.num_castles
             var d = 999
+            var castle = null
             for (var i in this.enemy_castle_list){
-                var e = this.r.bfs(this.r.me.x, this.r.me.y, ...this.enemy_castle_list[i])
-                if (e != null && e.length < d){
-                    d = e.length
+                for (var k in this.allied_castle_list){
+                    var e = this.r.bfs(...this.allied_castle_list[k], ...this.enemy_castle_list[i])
+                    if (e != null && e.length < d){
+                        d = e.length
+                        castle = this.allied_castle_list[k].slice()
+                    }
                 }
             }
             this.rush_distance = d
+            this.rush_castle = castle[0] == this.r.me.x && castle[1] == this.r.me.y
         }
 
         if (this.resource_saturation == null){
@@ -78,7 +86,7 @@ export class Castle{
                     if (units[i].id != this.r.me.id && units[i].castle_talk == 254){
                         this.num_finished_econ ++
                     }
-                    if (step > 25 || units[i].id != this.r.me.id && units[i].castle_talk == 252){
+                    if (step > this.latest_possible_rush || units[i].id != this.r.me.id && units[i].castle_talk == 252){
                         this.defended_rush = true
                         this.anti_rush_budget = 30
                     }
@@ -132,17 +140,25 @@ export class Castle{
 
         this.economy = this.r.get_visible_allied_units(units, SPECS.PILGRIM) < this.resource_saturation
 
-        if (this.synced_build){
-            this.synced_build = false
-            if (this.economy){
+        if (this.synced_build && this.rush_castle){
+            this.synced_build_rush = true
+        }
+
+        if (this.synced_build || this.synced_build_rush){
+            if (!this.synced_build){
+                this.synced_build_rush = false
+            }
+            if (this.economy && this.synced_build){
                 if (this.r.get_visible_allied_units(units, SPECS.PILGRIM) == (this.resource_saturation -1)){
                     if (this.castle_turn_order != 0) this.r.castleTalk(254)
                     this.num_finished_econ ++
                     this.num_finished_econ = Math.min(this.num_finished_econ, this.num_castles)
                 }
+                this.synced_build = false
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             } else {
                 this.num_units[SPECS.PROPHET] ++
+                this.synced_build = false
                 return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
 
             }
