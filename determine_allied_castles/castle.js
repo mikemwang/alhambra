@@ -33,7 +33,7 @@ export class Castle{
             this.enemy_castle_list = this.r.allied_castle_finder.enemy_castle_list.slice()
         }
 
-        //this.r.signal(255, 65)
+        this.r.signal(255, 65)
         if (this.r.karbonite >= 10 && this.r.fuel >= 50 && this.built < 2){
             this.r.log("building pilgrim")
             this.built ++

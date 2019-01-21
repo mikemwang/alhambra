@@ -88,7 +88,7 @@ export class BaseBot extends BCAbstractRobot{
         return 'x'
     }
 
-    flood_fill(startx, starty, find_karb=true, occupied_list = [], sym) {
+    flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
         this.log((find_karb && this.karbonite_map[starty][startx]))
         this.log((!find_karb && this.fuel_map[starty][startx]))
         if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
@@ -149,7 +149,7 @@ export class BaseBot extends BCAbstractRobot{
                             if (find_karb ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
                                 return newpath.slice(1)
                             }
-                            new_paths.push(newpath)
+                            if (newpath.length < max_range) new_paths.push(newpath)
                         }
                     }
                 }
@@ -192,7 +192,6 @@ export class BaseBot extends BCAbstractRobot{
         return signal.toString(2).slice(0,4)
     }
 
-
     random_ordering(inp_array){
         var array = inp_array.slice()
         var currentIndex = array.length, temporaryValue, randomIndex;
@@ -211,6 +210,10 @@ export class BaseBot extends BCAbstractRobot{
         }
 
         return array;
+    }
+
+    r_squared(x1, y1, x2, y2){
+        return Math.pow(x1-x2, 2) + Math.pow(y1-y2,2)
     }
 
     signal_encode(header, msg1, msg2, range){

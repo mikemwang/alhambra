@@ -44,8 +44,8 @@ export class Pilgrim{
             var path = null
             var done = false
             do {
-                path = this.r.flood_fill(this.r.me.x, this.r.me.y, this.karb_bot, this.occupied_resources, this.sym)
-                this.r.log(path)
+                path = this.r.flood_fill(this.r.me.x, this.r.me.y, this.karb_bot, this.occupied_resources, this.sym, this.max_range)
+
                 if ((!this.saturated && path == null) || path.length > this.max_range) {
                     this.r.log("IS SATURATED")
                     this.saturated = true
@@ -86,6 +86,9 @@ export class Pilgrim{
             }
             var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_resource)
             if (path != null) return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
+            this.target_resource = null
+            if (this.karb_bot) this.target_karb = null
+            if (!this.karb_bot) this.target_fuel = null
             //if (!this.r.traversable(...this.target_resource, this.r.getVisibleRobotMap())) this.target_resource = null
 
         } else { // deposit phase
