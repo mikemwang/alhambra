@@ -14,7 +14,7 @@ class MyRobot extends BaseBot{
         if (this.bot == null){
             this.bot = create_bot(this)
         }
-        return this.bot.turn()
+        return this.bot.turn(step)
     }
 }
 

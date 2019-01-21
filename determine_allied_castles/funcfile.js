@@ -89,8 +89,6 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
-        this.log((find_karb && this.karbonite_map[starty][startx]))
-        this.log((!find_karb && this.fuel_map[starty][startx]))
         if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
         if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
 
@@ -134,7 +132,7 @@ export class BaseBot extends BCAbstractRobot{
                     if (this.traversable(newx, newy, visible_robot_map)){
                         var valid = true
                         for (var k in occupied_list){
-                            if (newx == occupied_list[i][0] && newy == occupied_list[i][1]){
+                            if (newx == occupied_list[k][0] && newy == occupied_list[k][1]){
                                 valid = false 
                                 break
                             }
@@ -192,6 +190,10 @@ export class BaseBot extends BCAbstractRobot{
         return signal.toString(2).slice(0,4)
     }
 
+    r_squared(x1, y1, x2, y2){
+        return Math.pow(x1-x2, 2) + Math.pow(y1-y2,2)
+    }
+
     random_ordering(inp_array){
         var array = inp_array.slice()
         var currentIndex = array.length, temporaryValue, randomIndex;
@@ -212,9 +214,17 @@ export class BaseBot extends BCAbstractRobot{
         return array;
     }
 
-    r_squared(x1, y1, x2, y2){
-        return Math.pow(x1-x2, 2) + Math.pow(y1-y2,2)
+    resources_in_area(x, y, range, find_karb, sym){
+        var resources = []
+        do{
+            var p = this.flood_fill(x, y, find_karb, resources, sym, range)
+            if (p!=null){
+                resources.push(p[p.length-1].slice())
+            }
+        }while(p!=null)
+        return resources
     }
+
 
     signal_encode(header, msg1, msg2, range){
         /*
@@ -312,5 +322,25 @@ export class Allied_Castle_Finder{
             this.done = true
         }
         this.phase ++
+    }
+}
+
+export class SignalContainer{
+    constructor (header='', message=[], castletalk=false, range=0, priority=null){
+        this.header = header
+        this.message = message
+        this.castletalk = castletalk
+        this.range = range
+    }
+}
+
+export class PriorityQueue{
+
+}
+
+export class ActionContainer{
+    constructor (action=null, priority){
+        this.action = action
+        this.priority = priority
     }
 }

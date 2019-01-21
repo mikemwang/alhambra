@@ -14,14 +14,16 @@ export class Pilgrim{
         this.max_range = 5
     }
 
-    turn(){
+    turn(step){
+
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
         }
+
         if (this.home_depo == null) {
             var units = this.r.getVisibleRobots()
             for (var i in units) {
-                if (units[i].unit == SPECS.CASTLE){
+                if (units[i].unit == SPECS.CASTLE || units[i].unit == SPECS.CHURCH){
                     this.home_depo = [units[i].x, units[i].y]
                     break
                 }
@@ -46,7 +48,7 @@ export class Pilgrim{
             do {
                 path = this.r.flood_fill(this.r.me.x, this.r.me.y, this.karb_bot, this.occupied_resources, this.sym, this.max_range)
 
-                if ((!this.saturated && path == null) || path.length > this.max_range) {
+                if ((!this.saturated && path == null) || (path!=null && path.length > this.max_range)) {
                     this.r.log("IS SATURATED")
                     this.saturated = true
                     this.karb_bot = !this.karb_bot
@@ -89,7 +91,6 @@ export class Pilgrim{
             this.target_resource = null
             if (this.karb_bot) this.target_karb = null
             if (!this.karb_bot) this.target_fuel = null
-            //if (!this.r.traversable(...this.target_resource, this.r.getVisibleRobotMap())) this.target_resource = null
 
         } else { // deposit phase
             if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.home_depo)){

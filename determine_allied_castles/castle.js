@@ -1,5 +1,6 @@
 import {SPECS} from 'battlecode'
 import {Allied_Castle_Finder} from 'funcfile.js'
+ 
 
 export class Castle{
     constructor(r){
@@ -14,18 +15,24 @@ export class Castle{
         this.sym = null
         this.r = r
         this.built = 0
+        this.num_pilgrims = 0
+        this.num_prophets = 0
+        this.num_preachers = 0
+        this.resource_saturation = null
+        this.max_pilgrim_range = 5
     }
 
-    turn(){
-        var units = this.r.getVisibleRobots()
+    turn(step){
+        if (this.sym == null){
+            this.sym = this.r.find_sym(this.r.map)
+        }
 
         if (this.r.allied_castle_finder == null){
             this.r.allied_castle_finder = new Allied_Castle_Finder(this.r)
         }
 
-        if (this.sym == null){
-            this.sym = this.r.find_sym(this.r.map)
-        }
+
+        var units = this.r.getVisibleRobots()
 
         this.r.allied_castle_finder.find(units)
         if (this.r.allied_castle_finder.done && this.allied_castle_list == null){
@@ -33,7 +40,17 @@ export class Castle{
             this.enemy_castle_list = this.r.allied_castle_finder.enemy_castle_list.slice()
         }
 
-        this.r.signal(255, 65)
+
+        if (this.resource_saturation == null){
+            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+            this.resource_saturation = karbonites.length + fuels.length
+            if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...karbonites[0])){
+                return this.r.buildUnit(SPECS.PILGRIM, karbonites[0][0] - this.r.me.x, karbonites[0][1] - this.r.me.y)
+            }
+        }
+
+        return
         if (this.r.karbonite >= 10 && this.r.fuel >= 50 && this.built < 2){
             this.r.log("building pilgrim")
             this.built ++
