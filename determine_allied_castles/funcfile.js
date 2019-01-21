@@ -6,10 +6,13 @@ export class BaseBot extends BCAbstractRobot{
         this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
                              [-1,-0],          [+1, 0],
                              [-1,+1], [+0,+1], [+1, +1]]
+
+        this.fast_mvmt_choices = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1],[0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
+
         this.allied_castle_finder = null
     }
 
-    bfs(startx, starty, x, y, ignore_goal=false) {
+    bfs(startx, starty, x, y, ignore_goal=false, fast=true) {
         /*
         args: a start location startx starty, in a goal x and y
         returns: a list of waypoints, with index 0 being the next point to go
@@ -40,7 +43,7 @@ export class BaseBot extends BCAbstractRobot{
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                var choices = this.random_ordering(this.mvmt_choices)
+                var choices = fast ? this.random_ordering(this.fast_mvmt_choices) : this.random_ordering(this.mvmt_choices)
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]

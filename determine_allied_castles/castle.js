@@ -121,7 +121,7 @@ export class Castle{
                 }
             }
         }
-        if (atk_loc != null) this.r.signal_encode("1111", ...atk_loc, 10)
+        if (atk_loc != null && damage_taken) this.r.signal_encode("1111", ...atk_loc, 10)
         
         if (this.defensive_build != null){
             if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
@@ -140,7 +140,7 @@ export class Castle{
 
         this.economy = this.r.get_visible_allied_units(units, SPECS.PILGRIM) < this.resource_saturation
 
-        if (this.synced_build && this.rush_castle){
+        if (this.synced_build && this.rush_castle && step <= this.latest_possible_rush){
             this.synced_build_rush = true
         }
 
