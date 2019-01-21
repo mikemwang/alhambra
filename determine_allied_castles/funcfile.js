@@ -223,9 +223,13 @@ export class BaseBot extends BCAbstractRobot{
         return (x >= 0 && x < this.map.length && y >= 0 && y < this.map.length)
     }
 
-    in_range(x,y){
-        var r = this.r_squared(this.me.x, this.me.y, x, y) 
-        return r <= SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1] && r >= SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
+    in_range(x, y, x1=this.me.x, y1=this.me.y, stationary=true){
+        var r = this.r_squared(x1, y1, x, y) 
+        var max = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1]
+        if (!stationary) max ++
+        var min = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
+        if (!stationary) min ++
+        return r <= max && r >= min
     }
 
     is_adjacent(x1, y1, x2, y2){
@@ -235,22 +239,9 @@ export class BaseBot extends BCAbstractRobot{
     is_ally_by_id(id, units){
         for (var i in units){
             if (units[i].id == id){
-                this.log("here")
-                this.log("here")
-                this.log("here")
-                this.log("here")
-                this.log("here")
-                this.log("here")
-                
                 if (units[i].team == this.me.team){
                     return true
                 }
-
-                this.log("is not an ally")
-                this.log("is not an ally")
-                this.log("is not an ally")
-                this.log("is not an ally")
-                this.log("is not an ally")
                 return false
             }
         }
@@ -280,9 +271,49 @@ export class BaseBot extends BCAbstractRobot{
         return false
     }
 
-    move_lattice(units){
-    }
+    move_to_attack_range(startx, starty, goalx, goaly, stationary) {
+        var paths = [[[startx, starty]]]
 
+        var used_map = []
+        for (var i = 0; i < this.map.length; i++){
+            used_map[i] = []
+            for (var j = 0; j<  this.map.length; j++){
+                used_map[i][j] = false
+            }
+        }
+
+        used_map[starty][startx] = true
+        var visible_robot_map = this.getVisibleRobotMap()
+
+        while (paths.length > 0){
+            var new_paths = []
+            while (paths.length > 0){
+                var cur_path = paths.shift()  // get the path in the beginning
+                var choices = this.random_ordering(this.mvmt_choices)
+                for (var i in choices){
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+
+                    if (this.traversable(newx, newy, visible_robot_map)){
+                        if (!used_map[newy][newx]){
+                            used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            
+                            if (this.in_range(newx, newy, goalx, goaly, stationary))
+                                return newpath.slice(1)
+
+                            new_paths.push(newpath)
+                        }
+                    }
+                }
+            }
+            if (new_paths.length > 0) {
+                paths = new_paths.slice()
+            }
+        }
+        return null
+    }
     parse_coords(signal){
         return [parseInt(signal.toString(2).slice(4,10),2),parseInt(signal.toString(2).slice(10,16),2)]
     }

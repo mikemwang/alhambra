@@ -10,8 +10,10 @@ export class Castle{
                                 [1.54, 1.82, 1.82, 1.82, 1.54],
                                 [1.54, 1.54, 1.54, 1.54, 1.54]]
         this.allied_castle_list = null
+        this.anti_rush_budget = 90
         this.castle_turn_order = null
         this.defensive_build = null
+        this.defended_rush = false
         this.economy = true
         this.enemy_castle_list = null
         this.num_finished_econ = 0
@@ -23,9 +25,16 @@ export class Castle{
         this.resource_saturation = null
         this.rush_distance = null
         this.sym = null
+        this.last_hp = null
     }
 
     turn(step){
+        if (this.last_hp == null) {
+            this.last_hp = this.r.me.health
+        }
+        var damage_taken = this.r.me.health != this.last_hp
+        this.last_hp = this.r.me.health
+
         this.defensive_build = null
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
@@ -69,8 +78,12 @@ export class Castle{
                     if (units[i].id != this.r.me.id && units[i].castle_talk == 254){
                         this.num_finished_econ ++
                     }
+                    if (step > 25 || units[i].id != this.r.me.id && units[i].castle_talk == 252){
+                        this.defended_rush = true
+                        this.anti_rush_budget = 30
+                    }
                 }
-                if (this.r.karbonite >=(90 + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
+                if (this.r.karbonite >=(this.anti_rush_budget + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
                     this.r.castleTalk(255)
                     this.synced_build = true
                 }
@@ -100,12 +113,15 @@ export class Castle{
                 }
             }
         }
+        if (atk_loc != null) this.r.signal_encode("1111", ...atk_loc, 10)
         
         if (this.defensive_build != null){
-            this.r.castleTalk(253)
             if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
                 if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
                     this.num_units[this.defensive_build] ++
+                    if ((this.num_units[this.defensive_build]*SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE) >= 90 || step > 25) {
+                        this.r.castleTalk(252)  // anti-rush budget exceeded
+                    }
                     return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 }
             }
