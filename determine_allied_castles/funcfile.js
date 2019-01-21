@@ -89,21 +89,25 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
-        if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
-        if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
+        if (find_karb != null){
+            if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
+            if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
+        }
 
         var l = this.map.length
-        var xbounds = []
-        var ybounds = []
-        if (sym == 'x'){
-            xbounds = [0, l-1]
-            if (this.me.y < l/2) ybounds = [0, Math.floor(l/2)]
-            else ybounds = [Math.floor(l/2), l-1]
+        var xbounds = [0, l]
+        var ybounds = [0, l]
+        if (find_karb != null){
+            if (sym == 'x'){
+                xbounds = [0, l-1]
+                if (this.me.y < l/2) ybounds = [0, Math.floor(l/2)]
+                else ybounds = [Math.floor(l/2), l-1]
 
-        } else{
-            ybounds = [0, l-1]
-            if (this.me.x < l/2) xbounds = [0, Math.floor(l/2)]
-            else xbounds = [Math.floor(l/2), l-1]
+            } else{
+                ybounds = [0, l-1]
+                if (this.me.x < l/2) xbounds = [0, Math.floor(l/2)]
+                else xbounds = [Math.floor(l/2), l-1]
+            }
         }
 
         var paths = [[[startx, starty]]]
@@ -143,8 +147,12 @@ export class BaseBot extends BCAbstractRobot{
                             used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
+                            
+                            if (find_karb == null && !this.karbonite_map[newy][newx] && !this.fuel_map[newy][newx]){
+                                if (newx%2 == 0 && newy%2 ==0) return newpath.slice(1)
+                            }
 
-                            if (find_karb ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
+                            if ((find_karb != null && find_karb) ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
                                 return newpath.slice(1)
                             }
                             if (newpath.length < max_range) new_paths.push(newpath)
@@ -159,27 +167,120 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
+    get_closest_attackable_enemy_unit(units, priority_list){
+        var max = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1]
+        var min = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
+        var loc = null
+        var d = 99
+        var bot_at_loc = -1
+        for (var i in units){
+            if (units[i].team != this.me.team){
+                if (priority_list[units[i].unit] > bot_at_loc) {
+                    loc = [units[i].x, units[i].y]
+                    bot_at_loc = priority_list[units[i].unit] 
+                } else if (priority_list[units[i].unit] == bot_at_loc){
+                    var e = this.r_squared(units[i].x, units[i].y, this.me.x, this.me.y)
+                    if (e < d && e <= max && e >= min){
+                        d = e
+                        loc = [units[i].x, units[i].y]
+                        bot_at_loc = priority_list[units[i].unit] 
+                    }
+                }
+                
+            }
+        }
+        return loc
+    }
+
+    get_visible_allied_units(units, type=null){
+        var num = 0
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team == this.me.team){
+                if (type == null){
+                    num ++
+                    continue
+                }
+                if (unit.unit == type){
+                    num ++
+                }
+            }
+        }
+        return num
+    }
+
+    get_type_from_id(id, units){
+        for (var i in units){
+            var unit = units[i]
+            if (unit.id == id){
+                return unit.unit
+            }
+        }
+    }
+
     in_bounds(x, y) {
         // check if a tile is in bounds
         return (x >= 0 && x < this.map.length && y >= 0 && y < this.map.length)
+    }
+
+    in_range(x,y){
+        var r = this.r_squared(this.me.x, this.me.y, x, y) 
+        return r <= SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1] && r >= SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
     }
 
     is_adjacent(x1, y1, x2, y2){
         return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2))
     }
 
+    is_ally_by_id(id, units){
+        for (var i in units){
+            if (units[i].id == id){
+                this.log("here")
+                this.log("here")
+                this.log("here")
+                this.log("here")
+                this.log("here")
+                this.log("here")
+                
+                if (units[i].team == this.me.team){
+                    return true
+                }
+
+                this.log("is not an ally")
+                this.log("is not an ally")
+                this.log("is not an ally")
+                this.log("is not an ally")
+                this.log("is not an ally")
+                return false
+            }
+        }
+    }
+
+    is_type_by_id(id, type){
+        for (var i in units){
+            if (units[i].id == id){
+                return units[i].unit == type
+            }
+        }
+
+    }
+
     is_self(r){
         return r.id == this.me.id
     }
 
-    is_something_else_adjacent(coords){
+    is_something_else_adjacent(coords, type=null){
         var map = this.getVisibleRobotMap()
         for (var i in this.mvmt_choices){
-            if (map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]]){
-                return true
+            if (map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]] >0){
+                if (type == null) return true
+                if (this.get_type_from_id(map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]], this.getVisibleRobots()) == type) return true
             }
         }
         return false
+    }
+
+    move_lattice(units){
     }
 
     parse_coords(signal){
