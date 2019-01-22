@@ -12,9 +12,9 @@ export function create_bot(bot){
         return new Pilgrim(bot)
     }
     if (bot.me.unit === SPECS.PROPHET){
-        return new Preacher(bot)
+        return new Prophet(bot)
     }
     if (bot.me.unit === SPECS.PREACHER){
-        return new Prophet(bot)
+        return new Preacher(bot)
     }
 }
