@@ -54,7 +54,7 @@ class MyRobot extends BaseBot {
             this.bot = create_castle(this.me.unit)
           }
         }
-        this.bot.turn(this)
+        return this.bot.turn(this)
     }
 }
 
