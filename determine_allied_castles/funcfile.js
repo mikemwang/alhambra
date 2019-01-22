@@ -6,10 +6,13 @@ export class BaseBot extends BCAbstractRobot{
         this.mvmt_choices = [[-1,-1], [+0,-1], [+1,-1],
                              [-1,-0],          [+1, 0],
                              [-1,+1], [+0,+1], [+1, +1]]
+
+        this.fast_mvmt_choices = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1],[0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
+
         this.allied_castle_finder = null
     }
 
-    bfs(startx, starty, x, y, ignore_goal=false) {
+    bfs(startx, starty, x, y, ignore_goal=false, fast=true) {
         /*
         args: a start location startx starty, in a goal x and y
         returns: a list of waypoints, with index 0 being the next point to go
@@ -40,15 +43,18 @@ export class BaseBot extends BCAbstractRobot{
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                var choices = this.random_ordering(this.mvmt_choices)
+                var choices = fast ? this.random_ordering(this.fast_mvmt_choices) : this.random_ordering(this.mvmt_choices)
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
-                    if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
+                    if (this.traversable(newx, newy, visible_robot_map)){
                         if (!used_map[newy][newx]){
                             used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
+                            if (ignore_goal && this.is_adjacent(newx, newy, x, y)){
+                                return newpath.slice(1)    
+                            }
                             if (newx == x && newy == y) {
                                 return newpath.slice(1)
                             }
@@ -88,22 +94,53 @@ export class BaseBot extends BCAbstractRobot{
         return 'x'
     }
 
+    preacher_fire_control(units){
+        var is_there_a_preacher = false
+        var attack_square = null
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team != this.me.team){
+                for (var j in units){
+                    var allied_unit = units[j]
+                    if (allied_unit.team == this.me.team && allied_unit.unit == SPECS.PREACHER){
+                        is_there_a_preacher = true
+                        var r = this.r_squared(allied_unit.x, allied_unit.y, unit.x, unit.y)
+                        if (r > 16 && r <=27){
+                            for (var k in this.mvmt_choices){
+                                var choice = this.mvmt_choices[k]
+                                if (this.r_squared(allied_unit.x, allied_unit.y, unit.x+choice[0], unit.y+choice[1]) <= 16){
+                                    attack_square = [unit.x+choice[0], unit.y+choice[1]]
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return attack_square
+    }
+
     flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
-        if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
-        if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
+        if (find_karb != null){
+            if (find_karb && this.karbonite_map[starty][startx]) return [[startx, starty]]
+            if (!find_karb && this.fuel_map[starty][startx]) return [[startx, starty]]
+        }
 
         var l = this.map.length
-        var xbounds = []
-        var ybounds = []
-        if (sym == 'x'){
-            xbounds = [0, l-1]
-            if (this.me.y < l/2) ybounds = [0, Math.floor(l/2)]
-            else ybounds = [Math.floor(l/2), l-1]
+        var xbounds = [0, l]
+        var ybounds = [0, l]
+        if (find_karb != null){
+            if (sym == 'x'){
+                xbounds = [0, l-1]
+                if (this.me.y < l/2) ybounds = [0, Math.floor(l/2)]
+                else ybounds = [Math.floor(l/2), l-1]
 
-        } else{
-            ybounds = [0, l-1]
-            if (this.me.x < l/2) xbounds = [0, Math.floor(l/2)]
-            else xbounds = [Math.floor(l/2), l-1]
+            } else{
+                ybounds = [0, l-1]
+                if (this.me.x < l/2) xbounds = [0, Math.floor(l/2)]
+                else xbounds = [Math.floor(l/2), l-1]
+            }
         }
 
         var paths = [[[startx, starty]]]
@@ -143,8 +180,12 @@ export class BaseBot extends BCAbstractRobot{
                             used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
+                            
+                            if (find_karb == null && !this.karbonite_map[newy][newx] && !this.fuel_map[newy][newx]){
+                                if (newx%2 == 0 && newy%2 ==0) return newpath.slice(1)
+                            }
 
-                            if (find_karb ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
+                            if ((find_karb != null && find_karb) ? this.karbonite_map[newy][newx] : this.fuel_map[newy][newx]) {
                                 return newpath.slice(1)
                             }
                             if (newpath.length < max_range) new_paths.push(newpath)
@@ -159,29 +200,151 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
+    get_closest_attackable_enemy_unit(units, priority_list){
+        var loc = null
+        var d = 99
+        var bot_at_loc = -1
+        for (var i in units){
+            if (units[i].team != this.me.team){
+                if (priority_list[units[i].unit] > bot_at_loc) {
+                    loc = [units[i].x, units[i].y]
+                    bot_at_loc = priority_list[units[i].unit] 
+                } else if (priority_list[units[i].unit] == bot_at_loc){
+                    var e = this.r_squared(units[i].x, units[i].y, this.me.x, this.me.y)
+                    if (this.in_range(units[i].x, uints[i].y) && e >= min){
+                        d = e
+                        loc = [units[i].x, units[i].y]
+                        bot_at_loc = priority_list[units[i].unit] 
+                    }
+                }
+                
+            }
+        }
+        return loc
+    }
+
+    get_visible_allied_units(units, type=null){
+        var num = 0
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team == this.me.team){
+                if (type == null){
+                    num ++
+                    continue
+                }
+                if (unit.unit == type){
+                    num ++
+                }
+            }
+        }
+        return num
+    }
+
+    get_type_from_id(id, units){
+        for (var i in units){
+            var unit = units[i]
+            if (unit.id == id){
+                return unit.unit
+            }
+        }
+    }
+
     in_bounds(x, y) {
         // check if a tile is in bounds
         return (x >= 0 && x < this.map.length && y >= 0 && y < this.map.length)
+    }
+
+    in_range(x, y, x1=this.me.x, y1=this.me.y, stationary=true){
+        var r = this.r_squared(x1, y1, x, y) 
+        var max = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1]
+        if (!stationary) max ++
+        var min = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
+        if (!stationary) min ++
+        return r <= max && r >= min
     }
 
     is_adjacent(x1, y1, x2, y2){
         return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2))
     }
 
+    is_ally_by_id(id, units){
+        for (var i in units){
+            if (units[i].id == id){
+                if (units[i].team == this.me.team){
+                    return true
+                }
+                return false
+            }
+        }
+    }
+
+    is_type_by_id(id, type){
+        for (var i in units){
+            if (units[i].id == id){
+                return units[i].unit == type
+            }
+        }
+
+    }
+
     is_self(r){
         return r.id == this.me.id
     }
 
-    is_something_else_adjacent(coords){
+    is_something_else_adjacent(coords, type=null){
         var map = this.getVisibleRobotMap()
         for (var i in this.mvmt_choices){
-            if (map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]]){
-                return true
+            if (map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]] >0){
+                if (type == null) return true
+                if (this.get_type_from_id(map[coords[1]+this.mvmt_choices[i][1]][coords[0]+this.mvmt_choices[i][0]], this.getVisibleRobots()) == type) return true
             }
         }
         return false
     }
 
+    move_to_attack_range(startx, starty, goalx, goaly, stationary) {
+        var paths = [[[startx, starty]]]
+
+        var used_map = []
+        for (var i = 0; i < this.map.length; i++){
+            used_map[i] = []
+            for (var j = 0; j<  this.map.length; j++){
+                used_map[i][j] = false
+            }
+        }
+
+        used_map[starty][startx] = true
+        var visible_robot_map = this.getVisibleRobotMap()
+
+        while (paths.length > 0){
+            var new_paths = []
+            while (paths.length > 0){
+                var cur_path = paths.shift()  // get the path in the beginning
+                var choices = this.random_ordering(this.mvmt_choices)
+                for (var i in choices){
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+
+                    if (this.traversable(newx, newy, visible_robot_map)){
+                        if (!used_map[newy][newx]){
+                            used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            
+                            if (this.in_range(newx, newy, goalx, goaly, stationary))
+                                return newpath.slice(1)
+
+                            new_paths.push(newpath)
+                        }
+                    }
+                }
+            }
+            if (new_paths.length > 0) {
+                paths = new_paths.slice()
+            }
+        }
+        return null
+    }
     parse_coords(signal){
         return [parseInt(signal.toString(2).slice(4,10),2),parseInt(signal.toString(2).slice(10,16),2)]
     }
@@ -251,6 +414,7 @@ export class BaseBot extends BCAbstractRobot{
         msg2_bin = zeros + msg2_bin
 
         var message = header+msg1_bin+msg2_bin
+        this.log(message)
         this.signal(parseInt(message, 2), range)
     }
 

@@ -73,6 +73,7 @@ export class Pilgrim{
                 this.target_fuel = path[path.length-1]
             }
             this.target_resource = this.karb_bot ? this.target_karb : this.target_fuel
+            this.r.signal(4, 0)
         }
 
         var resource = this.karb_bot ? this.r.me.karbonite : this.r.me.fuel
@@ -84,7 +85,7 @@ export class Pilgrim{
             if (resource_map[this.r.me.y][this.r.me.x]){
                 return this.r.mine()
             }
-            var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_resource)
+            var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_resource, false, true)
             if (path != null) return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
             this.target_resource = null
             if (this.karb_bot) this.target_karb = null
@@ -94,7 +95,7 @@ export class Pilgrim{
             if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.home_depo)){
                 return this.r.give(this.home_depo[0]-this.r.me.x, this.home_depo[1]-this.r.me.y, this.r.me.karbonite, this.r.me.fuel)
             } else {
-                var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true)
+                var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true, true)
                 if (path != null){
                     return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
                 }
