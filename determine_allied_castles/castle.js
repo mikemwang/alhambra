@@ -32,6 +32,7 @@ export class Castle{
     }
 
     turn(step){
+        this.r.log(step)
         if (this.last_hp == null) {
             this.last_hp = this.r.me.health
         }
@@ -121,8 +122,18 @@ export class Castle{
                 }
             }
         }
-        if (atk_loc != null && damage_taken) this.r.signal_encode("1111", ...atk_loc, 10)
-        
+        var preacher_fcs = this.r.preacher_fire_control(units)
+        if (preacher_fcs != null){
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log("found")
+            this.r.log(preacher_fcs)
+            this.r.signal_encode("1111", ...preacher_fcs, 100)
+        }         
         if (this.defensive_build != null){
             if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
                 if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){

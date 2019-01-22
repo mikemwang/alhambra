@@ -47,11 +47,14 @@ export class BaseBot extends BCAbstractRobot{
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
-                    if (this.traversable(newx, newy, visible_robot_map) || (ignore_goal && newx==x && newy==y)){
+                    if (this.traversable(newx, newy, visible_robot_map)){
                         if (!used_map[newy][newx]){
                             used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
+                            if (ignore_goal && this.is_adjacent(newx, newy, x, y)){
+                                return newpath.slice(1)    
+                            }
                             if (newx == x && newy == y) {
                                 return newpath.slice(1)
                             }
@@ -89,6 +92,33 @@ export class BaseBot extends BCAbstractRobot{
             }
         }
         return 'x'
+    }
+
+    preacher_fire_control(units){
+        var is_there_a_preacher = false
+        var attack_square = null
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team != this.me.team){
+                for (var j in units){
+                    var allied_unit = units[j]
+                    if (allied_unit.team == this.me.team && allied_unit.unit == SPECS.PREACHER){
+                        is_there_a_preacher = true
+                        var r = this.r_squared(allied_unit.x, allied_unit.y, unit.x, unit.y)
+                        if (r > 16 && r <=27){
+                            for (var k in this.mvmt_choices){
+                                var choice = this.mvmt_choices[k]
+                                if (this.r_squared(allied_unit.x, allied_unit.y, unit.x+choice[0], unit.y+choice[1]) <= 16){
+                                    attack_square = [unit.x+choice[0], unit.y+choice[1]]
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return attack_square
     }
 
     flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
@@ -171,8 +201,6 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     get_closest_attackable_enemy_unit(units, priority_list){
-        var max = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[1]
-        var min = SPECS.UNITS[this.me.unit].ATTACK_RADIUS[0]
         var loc = null
         var d = 99
         var bot_at_loc = -1
@@ -183,7 +211,7 @@ export class BaseBot extends BCAbstractRobot{
                     bot_at_loc = priority_list[units[i].unit] 
                 } else if (priority_list[units[i].unit] == bot_at_loc){
                     var e = this.r_squared(units[i].x, units[i].y, this.me.x, this.me.y)
-                    if (e < d && e <= max && e >= min){
+                    if (this.in_range(units[i].x, uints[i].y) && e >= min){
                         d = e
                         loc = [units[i].x, units[i].y]
                         bot_at_loc = priority_list[units[i].unit] 
@@ -386,6 +414,7 @@ export class BaseBot extends BCAbstractRobot{
         msg2_bin = zeros + msg2_bin
 
         var message = header+msg1_bin+msg2_bin
+        this.log(message)
         this.signal(parseInt(message, 2), range)
     }
 
