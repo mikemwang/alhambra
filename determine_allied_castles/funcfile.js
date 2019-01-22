@@ -95,7 +95,6 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     preacher_fire_control(units){
-        var is_there_a_preacher = false
         var attack_square = null
         for (var i in units){
             var unit = units[i]
