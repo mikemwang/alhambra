@@ -15,6 +15,6 @@ export function create_bot(bot){
         return new Preacher(bot)
     }
     if (bot.me.unit === SPECS.PREACHER){
-        return new Preacher(bot)
+        return new Prophet(bot)
     }
 }
