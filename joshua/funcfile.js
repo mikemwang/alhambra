@@ -87,6 +87,11 @@ export class BaseBot extends BCAbstractRobot{
         this.step = -1
     }
 
+    spawn_unit_with_first_enemy_castle(){
+    }
+
+    second_enemy_castle_follow_up(){
+    }
 
     initalizes_my_castles(units){
       this.log(units)
