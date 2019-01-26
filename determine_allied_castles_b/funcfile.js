@@ -16,10 +16,6 @@ export class BaseBot extends BCAbstractRobot{
         /*
         args: a start location startx starty, in a goal x and y
         returns: a list of waypoints, with index 0 being the next point to go
-
-        ***notes
-        traffic-jam behavior: if the way to the goal, or the goal itself, is
-        blocked by another robot, this robot will stop
         */
 
         if (x == startx && y == starty){

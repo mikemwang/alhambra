@@ -38,18 +38,6 @@ export class Castle{
 
     turn(step){
         this.r.log(step)
-        if (this.r.me.karbonite > 0){
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-            this.r.log("castle has karb")
-        }
         if (this.rush_distance != null && step > this.rush_distance + 8)
         {
             this.expand = true

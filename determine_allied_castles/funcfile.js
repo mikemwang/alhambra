@@ -472,7 +472,16 @@ export class BaseBot extends BCAbstractRobot{
             var unit = units[i]
             if (unit.team != this.me.team)
             {
-                if (unit.unit == SPECS.PREACHER || unit.unit == SPECS.PILGRIM)
+                if (unit.unit == SPECS.PREACHER)
+                {
+                    if (this.r_squared(this.me.x, this.me.y, unit.x, unit.y) <= 27)  // one block outside of min range
+                    {
+                        if (this.in_range(this.me.x, this.me.y, unit.x, unit.y)) {
+                            return true
+                        }
+                    }
+                }
+                else if (unit.unit == SPECS.CRUSADER)
                 {
                     if (this.r_squared(this.me.x, this.me.y, unit.x, unit.y) <= 27)  // one block outside of min range
                     {
