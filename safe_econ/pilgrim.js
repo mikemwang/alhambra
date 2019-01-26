@@ -15,6 +15,7 @@ export class Pilgrim{
         this.target_resource = null
         this.target_karb = null
         this.target_fuel = null
+        this.church_turn = 0
     }
 
     expand_phase(step, units){
@@ -22,6 +23,7 @@ export class Pilgrim{
             if (this.r.karbonite >= 50 && this.r.fuel >= 200 && this.r.traversable(...this.target_expansion, this.r.getVisibleRobotMap())){
                 this.r.log("built church")
                 this.r.castleTalk(255)
+                this.r.signal_encode("1011", this.church_turn, this.church_turn, 3)
                 this.expanding = false
                 this.home_depo = this.target_expansion.slice()
                 return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
@@ -48,9 +50,10 @@ export class Pilgrim{
                 if (this.r.isRadioing(unit)) {
                     var header = this.r.parse_header(unit.signal)
                     var coords = this.r.parse_coords(unit.signal)
-                    if (header == '1000'){
+                    if (header == '1000' || header == '1001' || header == '1010'){
                         this.target_expansion = coords.slice()
                         this.expanding = true
+                        this.church_turn = parseInt(header.substring(2,4), 2)
                         break
                     }
                 }
@@ -60,8 +63,15 @@ export class Pilgrim{
         if (this.home_depo == null) {
             for (var i in units) {
                 if (units[i].unit == SPECS.CASTLE || units[i].unit == SPECS.CHURCH){
-                    this.home_depo = [units[i].x, units[i].y]
-                    break
+                    if (this.home_depo == null){
+                        this.home_depo = [units[i].x, units[i].y]
+                    } else {
+                        var d1 = this.r.map_distance(...this.home_depo, this.r.me.x, this.r.me.y)
+                        var d2 = this.r.map_distance(units[i].x, units[i].y, this.r.me.x, this.r.me.y)
+                        if (d2 < d1){
+                            this.home_depo = [units[i].x, units[i].y]
+                        }
+                    }
                 }
             }
         }
@@ -116,7 +126,6 @@ export class Pilgrim{
                 this.target_fuel = path[path.length-1]
             }
             this.target_resource = this.karb_bot ? this.target_karb : this.target_fuel
-            this.r.signal(4, 0)
         }
 
         var resource = this.karb_bot ? this.r.me.karbonite : this.r.me.fuel

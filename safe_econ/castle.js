@@ -1,9 +1,15 @@
 import {SPECS} from 'battlecode'
 import {Allied_Castle_Finder} from 'funcfile.js'
+//import { strict } from 'assert';
+//import { stringify } from 'querystring';
 //import { join } from 'path';
 
 /* castletalk key:
 *   255: church built
+*/
+
+/* signal header key:
+1000, 1001, 1010: build church, church turn order
 */
  
 
@@ -26,6 +32,7 @@ export class Castle{
         this.desired_pilgrims = null
         this.karbonite_saturation = null
         this.latest_possible_rush = 25
+        this.num_expansions = 0
         this.num_finished_econ = 0
         this.num_castles = null
         this.num_units = [0,0,0,0,0,0]
@@ -150,6 +157,7 @@ export class Castle{
                 this.am_expanding = false
                 this.pilgrim_dispatched = false
                 this.contested_expansion = false
+                this.num_castles ++
             }
         }
 
@@ -157,6 +165,7 @@ export class Castle{
             this.check_to_expand = false
             if (this.possible_expansions == null){
                 this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list, this.num_castles)
+                this.num_expansions = this.possible_expansions.length
             }
 
             this.cur_expansion = this.possible_expansions[0].slice()
@@ -197,12 +206,23 @@ export class Castle{
                     karb_reserve += SPECS.UNITS[SPECS.PROPHET].CONSTRUCTION_KARBONITE
                 }
             }
+            var which_church = this.num_expansions-this.possible_expansions.length-1
             if (this.r.karbonite >= karb_reserve && this.r.fuel >= fuel_reserve){
                 if (this.contested_expansion){
                     this.r.log("this is a contested expansion, we need an escort")
                     if (escort_available) {
                         this.r.log("an escort is available, dispatching pilgrim")
-                        this.r.signal_encode("1000", ...this.cur_expansion, 100)
+                        switch (which_church){
+                            case(0):
+                                this.r.signal_encode("1000", ...this.cur_expansion, 100)
+                                break
+                            case(1):
+                                this.r.signal_encode("1001", ...this.cur_expansion, 100)
+                                break
+                            case(2):
+                                this.r.signal_encode("1010", ...this.cur_expansion, 100)
+                                break
+                        }
                         this.pilgrim_dispatched = true
                         return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
                     } else {
@@ -212,7 +232,17 @@ export class Castle{
                     }
                 } else {
                     this.r.log("no escort required for uncontested expansion")
-                    this.r.signal_encode("1000", ...this.cur_expansion, 2)
+                    switch (which_church){
+                        case(0):
+                            this.r.signal_encode("1000", ...this.cur_expansion, 2)
+                            break
+                        case(1):
+                            this.r.signal_encode("1001", ...this.cur_expansion, 2)
+                            break
+                        case(2):
+                            this.r.signal_encode("1010", ...this.cur_expansion, 2)
+                            break
+                    }
                     this.pilgrim_dispatched = true
                     return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
                 }
@@ -230,6 +260,11 @@ export class Castle{
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
         }
+
+        //var b = this.num_castles-this.castle_turn_order
+        //if (this.possible_expansions.length == 0 && this.r.karbonite >= b*25 && this.r.fuel >= b*50){
+        //    return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //}
         return
         //if (this.resource_saturation == null){
         //    var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)

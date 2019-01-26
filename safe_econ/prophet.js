@@ -22,7 +22,7 @@ export class Prophet{
             if (this.r.isRadioing(unit)) {
                 var header = this.r.parse_header(unit.signal)
                 var coords = this.r.parse_coords(unit.signal)
-                if (header == '1000'){
+                if (header == '1000' || header == '1001' || header == '1010'){
                     this.target_expansion = coords.slice()
                     this.bodyguard = true
                     break

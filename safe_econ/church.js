@@ -12,9 +12,22 @@ export class Church{
         this.fuel_saturation = null
         this.sym = null
         this.max_pilgrim_range = 3
+        this.church_turn_order = 0
     }
     turn (step){
         var units = this.r.getVisibleRobots()
+        for (var i in units){
+            var unit = units[i]
+            if (this.r.isRadioing(unit)){
+                var header = this.r.parse_header(unit.signal)
+                var message = this.r.parse_coords(unit.signal)
+                if (header == '1011') {
+                    this.church_turn_order = message[0]
+                    this.r.log("I am church number " + this.church_turn_order.toString(10))
+                    }
+            }
+        }
+
 
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
@@ -66,6 +79,10 @@ export class Church{
             {
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
+        }
+        return
+        if (this.r.karbonite >= 75 && this.r.fuel >= 150){
+            return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
         }
     }
 }
