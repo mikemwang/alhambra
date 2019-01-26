@@ -11,13 +11,8 @@ import {Allied_Castle_Finder} from 'funcfile.js'
 
 export class Castle{
     constructor(r){
-        this.resource_kernel = [[1.54, 1.54, 1.54, 1.54, 1.54],
-                                [1.54, 1.82, 1.82, 1.82, 1.54],
-                                [1.54, 1.82, 0.00, 1.82, 1.54],
-                                [1.54, 1.82, 1.82, 1.82, 1.54],
-                                [1.54, 1.54, 1.54, 1.54, 1.54]]
         this.allied_castle_list = null
-        this.anti_rush_budget = 90
+        this.anti_rush_budget = 100
         this.castle_turn_order = null
         this.defensive_build = null
         this.defended_rush = false
@@ -43,6 +38,18 @@ export class Castle{
 
     turn(step){
         this.r.log(step)
+        if (this.r.me.karbonite > 0){
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+            this.r.log("castle has karb")
+        }
         if (this.rush_distance != null && step > this.rush_distance + 8)
         {
             this.expand = true
@@ -73,13 +80,11 @@ export class Castle{
             this.num_castles = this.r.allied_castle_finder.num_castles
             var d = 999
             var castle = null
-            for (var i in this.enemy_castle_list){
-                for (var k in this.allied_castle_list){
-                    var e = this.r.bfs(...this.allied_castle_list[k], ...this.enemy_castle_list[i])
-                    if (e != null && e.length < d){
-                        d = e.length
-                        castle = this.allied_castle_list[k].slice()
-                    }
+            for (var k in this.allied_castle_list){
+                var e = Math.abs(this.r.map.length - (this.sym=='x' ? this.allied_castle_list[k][1] : this.allied_castle_list[k][1]))
+                if (e < d){
+                    d = e
+                    castle = this.allied_castle_list[k].slice()
                 }
             }
             this.rush_distance = d
@@ -161,15 +166,9 @@ export class Castle{
             }
         }
 
-        if ( this.expand )
+        if ( step == 30)
         {
-            if ( !this.rush_castle )
-            {
-                for ( var i in units )
-                {
-                    var unit = units[i]
-                }
-            }
+            this.r.find_good_expansions(this.sym, [this.r.karbonite_map, this.r.fuel_map])
         }
 
         this.economy = this.r.get_visible_allied_units(units, SPECS.PILGRIM) < this.resource_saturation

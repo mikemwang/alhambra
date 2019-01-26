@@ -10,6 +10,12 @@ export class BaseBot extends BCAbstractRobot{
         this.fast_mvmt_choices = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1],[0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
 
         this.allied_castle_finder = null
+
+        this.resource_kernel = [[1.54, 1.54, 1.54, 1.54, 1.54],
+                                [1.54, 1.82, 1.82, 1.82, 1.54],
+                                [1.54, 1.82, 0.00, 1.82, 1.54],
+                                [1.54, 1.82, 1.82, 1.82, 1.54],
+                                [1.54, 1.54, 1.54, 1.54, 1.54]]
     }
 
     bfs(startx, starty, x, y, ignore_goal=false, fast=true) {
@@ -82,7 +88,7 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
-    find_good_expansions(sym)
+    find_good_expansions(sym, resource_maps)
     {
         var xbounds = [0, this.map.length-1]
         var ybounds = [0, this.map.length-1]
@@ -107,28 +113,33 @@ export class BaseBot extends BCAbstractRobot{
             {
                 xbounds = [Math.floor(this.map.length /2) - 3, this.map.length-1]
             }
-            
         }
 
-        var scores = new Array(this.map.length).fill(new Array(this.map.length).fill(0))
-         
-        for (var i in xbounds){
-            for (var j in ybounds){
-                var score = 0
-                for (var k in this.resource_kernel){
-                    for (var l in this.resource_kernel){
+        var scores = []
+        for (var i = 0; i < this.map.length; i++)
+        {
+            scores[i] = new Array(this.map.length).fill(0)
+        }
+
+        for (var i = xbounds[0]; i<=xbounds[1]; i++){
+            for (var j = ybounds[0]; j<=ybounds[1]; j++){
+                for (var k = 0; k < this.resource_kernel.length; k ++){
+                    for (var l = 0; l < this.resource_kernel.length; l++){
                         var coeff = this.resource_kernel[l][k]
                         var x = i + k - 2
                         var y = j + l - 2
-                        if (!this.r.in_bounds(x, y)) continue
-                        if (this.r.karbonite_map[y][x]) {
-                            score += coeff
+                        if (!this.in_bounds(x, y)) continue
+                        for (var m in resource_maps)
+                        {
+                            if (resource_maps[m][y][x]) {
+                                scores[j][i] += coeff
+                            }
                         }
                     }
                 }
-                scores[j][i] = score
             }
         }
+        return scores
     }
 
     find_sym(map) {
@@ -436,7 +447,7 @@ export class BaseBot extends BCAbstractRobot{
         return resources
     }
 
-    run_the_fuck_away(enemy_loc)
+    kite(enemy_loc)
     {
         var best_d = 0
         var coord = null
@@ -456,7 +467,7 @@ export class BaseBot extends BCAbstractRobot{
         return coord
     }
 
-    should_i_run_the_fuck_away(units){
+    should_i_kite(units){
         for (var i in units){
             var unit = units[i]
             if (unit.team != this.me.team)

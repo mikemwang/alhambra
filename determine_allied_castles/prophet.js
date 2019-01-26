@@ -15,9 +15,9 @@ export class Prophet{
 
         var units = this.r.getVisibleRobots()
 
-        if (this.r.should_i_run_the_fuck_away(units)) 
+        if (this.r.should_i_kite(units)) 
         {
-            var path = this.r.run_the_fuck_away(this.r.get_closest_attackable_enemy_unit(units, [0,0,0,0,0,0]))
+            var path = this.r.kite(this.r.get_closest_attackable_enemy_unit(units, [0,0,0,0,0,0]))
             if (path != null) {
                 return this.r.move(path[0] - this.r.me.x, path[1] - this.r.me.y)
             }
