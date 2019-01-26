@@ -603,7 +603,6 @@ export class BaseBot extends BCAbstractRobot{
         msg2_bin = zeros + msg2_bin
 
         var message = header+msg1_bin+msg2_bin
-        this.log(message)
         this.signal(parseInt(message, 2), range)
     }
 

@@ -4,22 +4,55 @@ export class Pilgrim{
     constructor(r){
         this.r = r
         this.karb_bot = true
-        this.first_run = true
+        this.expanding = null
+        this.first_run = 0
         this.home_depo = null
+        this.max_range = 5
         this.occupied_resources = []
+        this.saturated = false
+        this.sym = null
+        this.target_expansion = null
         this.target_resource = null
         this.target_karb = null
         this.target_fuel = null
-        this.saturated = false
-        this.sym = null
-        this.max_range = 5
+    }
+
+    expand_phase(step, units){
+        var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)        
+        if (path != null){
+            return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
+        }
     }
 
     turn(step){
 
+        var units = this.r.getVisibleRobots()
+
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
         }
+
+        if (this.expanding == null){
+            this.expanding = false
+            for (var i in units){
+                var unit = units[i]
+                if (this.r.isRadioing(unit)) {
+                    var header = this.r.parse_header(unit.signal)
+                    var coords = this.r.parse_coords(unit.signal)
+                    if (header == '1000'){
+                        this.target_expansion = coords.slice()
+                        this.expanding = true
+                        break
+                    }
+                }
+            }
+        }
+
+
+        if (this.expanding) {
+            return this.expand_phase(step, units)
+        }
+        // normal resource gathering below this line
 
         if (this.home_depo == null) {
             var units = this.r.getVisibleRobots()
@@ -82,7 +115,7 @@ export class Pilgrim{
         var resource_map = this.karb_bot ? this.r.karbonite_map : this.r.fuel_map
 
         // mine phase
-        if ((!this.first_run && resource < max_resource) || (this.first_run && resource < 0.5*max_resource && this.karb_bot)){
+        if ((this.first_run >= 5 && resource < max_resource) || (this.first_run < 5 && resource < 0.5*max_resource && this.karb_bot)){
             if (resource_map[this.r.me.y][this.r.me.x]){
                 return this.r.mine()
             }
@@ -94,7 +127,7 @@ export class Pilgrim{
 
         } else { // deposit phase
             if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.home_depo)){
-                this.first_run = false
+                this.first_run ++
                 return this.r.give(this.home_depo[0]-this.r.me.x, this.home_depo[1]-this.r.me.y, this.r.me.karbonite, this.r.me.fuel)
             } else {
                 var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true, true)

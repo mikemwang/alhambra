@@ -18,6 +18,7 @@ export class Castle{
         this.castle_turn_order = null
         this.check_to_expand = false
         this.contested_expansion = false
+        this.cur_expansion = null
         this.defensive_build = null
         this.defended_rush = false
         this.economy = true
@@ -31,6 +32,7 @@ export class Castle{
         this.num_castles = null
         this.num_units = [0,0,0,0,0,0]
         this.max_pilgrim_range = 5
+        this.pilgrim_dispatched
         this.r = r
         this.synced_build = false
         this.synced_build_rush = false
@@ -147,14 +149,14 @@ export class Castle{
             this.check_to_expand = false
             this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
 
-            var cur_expansion = this.possible_expansions[0].slice()
+            this.cur_expansion = this.possible_expansions[0].slice()
             this.possible_expansions = this.possible_expansions.slice(1) // we have occupied the first one
 
             var best_d = 999
             var best_castle = []
             for (var i in this.allied_castle_list){
                 var castle = this.allied_castle_list[i]
-                var d = this.r.map_distance(...castle, ...cur_expansion)
+                var d = this.r.map_distance(...castle, ...this.cur_expansion)
                 if (d < best_d){
                     best_d = d
                     best_castle = castle.slice()
@@ -170,24 +172,40 @@ export class Castle{
                 test_coord = 1
             }
 
-            if (Math.abs(cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.5*this.r.map.length) this.contested_expansion = true
-            //this.r.log("castle")
-            //this.r.log(best_castle)
-            //this.r.log("tried expansion at ")
-            //this.r.log(cur_expansion)
-            //if (this.am_expanding){
-            //    this.r.log("i am the closest")
-            //} else {
-            //    this.r.log("i am not the closest")
-            //}
-            //if (this.contested_expansion){
-            //    this.r.log("requires escort")
-            //} else {
-            //    this.r.log("does not require escort")
-            //}
+            if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.5*this.r.map.length) this.contested_expansion = true
         }
 
-
+        if (this.am_expanding && !this.pilgrim_dispatched){
+            var karb_reserve = 60
+            var fuel_reserve = 200
+            var escort_available = false
+            if (this.r.get_visible_allied_units(units, SPECS.PROPHET) > 0) escort_available = true
+            if (this.contested_expansion) {
+                if (!escort_available) {
+                    karb_reserve += SPECS.UNITS[SPECS.PROPHET].CONSTRUCTION_KARBONITE
+                }
+            }
+            if (this.r.karbonite >= karb_reserve && this.r.fuel >= fuel_reserve){
+                if (this.contested_expansion){
+                    this.r.log("this is a contested expansion, we need an escort")
+                    if (escort_available) {
+                        this.r.log("an escort is available, dispatching pilgrim")
+                        this.r.signal_encode("1000", ...this.cur_expansion, 100)
+                        this.pilgrim_dispatched = true
+                        return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
+                    } else {
+                        this.r.log("no escort available for contested expansion, building escort")
+                        this.pilgrim_dispatched = false
+                        return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
+                    }
+                } else {
+                    this.r.log("no escort required for uncontested expansion")
+                    this.r.signal_encode("1000", ...this.cur_expansion, 2)
+                    this.pilgrim_dispatched = true
+                    return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
+                }
+            }
+        }
         return
         //if (this.resource_saturation == null){
         //    var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
