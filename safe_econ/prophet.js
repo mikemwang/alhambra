@@ -6,6 +6,8 @@ export class Prophet{
         this.lattice_occupancy = []
         this.priority_list = [0,0,0,0,1,0]
         this.sym = null
+        this.bodyguard = false
+        this.target_expansion = null
 
     }
     turn(step){
@@ -14,6 +16,21 @@ export class Prophet{
         }
 
         var units = this.r.getVisibleRobots()
+
+        if (this.bodyguard == false){
+            for (var i in units){
+                var unit = units[i]
+                if (this.r.isRadioing(unit)) {
+                    var header = this.r.parse_header(unit.signal)
+                    var coords = this.r.parse_coords(unit.signal)
+                    if (header == '1000'){
+                        this.target_expansion = coords.slice()
+                        this.bodyguard = true
+                        break
+                    }
+                }
+            }
+        }
 
         if (this.r.should_i_kite(units)) 
         {
@@ -25,11 +42,12 @@ export class Prophet{
 
         var atk = this.r.get_closest_attackable_enemy_unit(units, this.priority_list)
         if (atk != null){
-            //var new_fire_control = this.r.preacher_fire_control(units)
-            //if (new_fire_control != null){
-            //    this.r.signal_encode("1111", ...new_fire_control, 16)
-            //}
             return this.r.attack(atk[0]-this.r.me.x, atk[1]-this.r.me.y)
+        }
+
+        if (this.bodyguard) {
+            var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)
+            if (path != null) return this.r.move(path[0][0]-this.r.me.x, path[0][1]-this.r.me.y)
         }
 
         if (this.r.me.x%2 != 0 || this.r.me.y%2 != 0 ||this.r.karbonite_map[this.r.me.y][this.r.me.x] || this.r.fuel_map[this.r.me.y][this.r.me.x] ){
