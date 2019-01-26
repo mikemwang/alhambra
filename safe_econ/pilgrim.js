@@ -19,9 +19,13 @@ export class Pilgrim{
 
     expand_phase(step, units){
         if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.target_expansion)){
-            this.r.log("built church")
-            this.expanding = false
-            return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
+            if (this.r.karbonite >= 50 && this.r.fuel >= 200 && this.r.traversable(...this.target_expansion, this.r.getVisibleRobotMap())){
+                this.r.log("built church")
+                this.r.castleTalk(255)
+                this.expanding = false
+                this.home_depo = this.target_expansion.slice()
+                return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
+            }
         }
         var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)        
         if (path != null){
@@ -53,12 +57,6 @@ export class Pilgrim{
             }
         }
 
-
-        if (this.expanding) {
-            return this.expand_phase(step, units)
-        }
-        // normal resource gathering below this line
-
         if (this.home_depo == null) {
             for (var i in units) {
                 if (units[i].unit == SPECS.CASTLE || units[i].unit == SPECS.CHURCH){
@@ -67,6 +65,13 @@ export class Pilgrim{
                 }
             }
         }
+
+
+        if (this.expanding) {
+            return this.expand_phase(step, units)
+        }
+        // normal resource gathering below this line
+
 
         // retargeting conditions
         if (!this.saturated){

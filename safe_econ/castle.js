@@ -3,9 +3,7 @@ import {Allied_Castle_Finder} from 'funcfile.js'
 //import { join } from 'path';
 
 /* castletalk key:
-*   255: synced build
-*   254: finished econ (saturated nearby karbs)
-*   252: someone has spent the anti-rush budget
+*   255: church built
 */
  
 
@@ -25,7 +23,7 @@ export class Castle{
         this.enemy_castle_list = null
         this.possible_expansions = null
         this.fuel_saturation = null
-        this.init_karbs = null
+        this.desired_pilgrims = null
         this.karbonite_saturation = null
         this.latest_possible_rush = 25
         this.num_finished_econ = 0
@@ -84,20 +82,32 @@ export class Castle{
             this.check_to_expand = true
         }
 
+        if (this.resource_saturation == null){
+            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+            this.karbonite_saturation = karbonites.length
+            this.fuel_saturation = fuels.length
+            this.resource_saturation = karbonites.length + fuels.length
+        }
+
         // initial pilgrims
-        if (this.init_karbs == null)
+        if (this.desired_pilgrims == null)
         {
-            this.init_karbs = []
+            this.desired_pilgrims = 0
             for (var i = -3; i < 4; i++)
             {
                 for (var j = -3; j < 4; j++)
                 {
                     var x = this.r.me.x + i
                     var y = this.r.me.y + j
-                    if (this.r.r_squared(0,0,i,j) <= 9 && this.r.in_bounds(x, y) && this.r.karbonite_map[y][x]) this.init_karbs.push([x,y])
+                    if (this.r.r_squared(0,0,i,j) <= 9 && this.r.in_bounds(x, y) && this.r.karbonite_map[y][x]) this.desired_pilgrims ++
                 }
             }
         }        
+
+        if (step > 20){
+            this.desired_pilgrims = Math.max(this.desired_pilgrims, this.resource_saturation*Math.min(step/50, 1.0))
+        }
 
         // rush defense takes precedence over pilgrim production
         var atk_loc = null
@@ -133,21 +143,23 @@ export class Castle{
                 return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
             }
         }
-        var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
-        if ( p == 0 || (p < this.init_karbs.length && this.r.karbonite >= 60))
-        {
-            this.num_units[SPECS.PILGRIM] ++
 
-            if (this.num_units[SPECS.PILGRIM] == this.init_karbs.length) this.all_finished = true
-            if (this.r.karbonite >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_KARBONITE)
-            {
-                return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+
+        for (var i in units){
+            var unit = units[i]
+            if (unit.castle_talk == 255){
+                if (this.possible_expansions.length > 0) this.check_to_expand = true
+                this.am_expanding = false
+                this.pilgrim_dispatched = false
+                this.contested_expansion = false
             }
         }
 
         if (this.check_to_expand){
             this.check_to_expand = false
-            this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+            if (this.possible_expansions == null){
+                this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+            }
 
             this.cur_expansion = this.possible_expansions[0].slice()
             this.possible_expansions = this.possible_expansions.slice(1) // we have occupied the first one
@@ -172,8 +184,10 @@ export class Castle{
                 test_coord = 1
             }
 
-            if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.5*this.r.map.length) this.contested_expansion = true
+            if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.25*this.r.map.length) this.contested_expansion = true
+            this.r.log(this.am_expanding)
         }
+
 
         if (this.am_expanding && !this.pilgrim_dispatched){
             var karb_reserve = 60
@@ -204,6 +218,18 @@ export class Castle{
                     this.pilgrim_dispatched = true
                     return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
                 }
+            }
+        }
+
+        // saturating local resources is low priority
+        var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
+        if ( p == 0 || (this.num_units[SPECS.PILGRIM]+1 <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
+        {
+            this.num_units[SPECS.PILGRIM] ++
+
+            if (this.r.karbonite >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_FUEL)
+            {
+                return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
         }
         return

@@ -17,20 +17,24 @@ export class Prophet{
 
         var units = this.r.getVisibleRobots()
 
-        if (this.bodyguard == false){
-            for (var i in units){
-                var unit = units[i]
-                if (this.r.isRadioing(unit)) {
-                    var header = this.r.parse_header(unit.signal)
-                    var coords = this.r.parse_coords(unit.signal)
-                    if (header == '1000'){
-                        this.target_expansion = coords.slice()
-                        this.bodyguard = true
-                        break
-                    }
+        for (var i in units){
+            var unit = units[i]
+            if (this.r.isRadioing(unit)) {
+                var header = this.r.parse_header(unit.signal)
+                var coords = this.r.parse_coords(unit.signal)
+                if (header == '1000'){
+                    this.target_expansion = coords.slice()
+                    this.bodyguard = true
+                    break
+                }
+            }
+            if (this.bodyguard){
+                if (unit.unit == SPECS.CHURCH && unit.x == this.target_expansion[0] && unit.y == this.target_expansion[1] && unit.team == this.r.me.team){
+                    this.bodyguard = false
                 }
             }
         }
+
 
         if (this.r.should_i_kite(units)) 
         {

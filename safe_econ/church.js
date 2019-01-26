@@ -1,8 +1,72 @@
 import {SPECS} from 'battlecode'
 
 export class Church{
-    constructor (){
+    constructor (r){
+        this.r = r
+        this.defensive_build = null
+        this.desired_pilgrims = 0
+        this.num_units = [0,0,1,0,0,0]
+        this.desired_pilgrims = 0
+        this.resource_saturation = null
+        this.karbonite_saturation = null
+        this.fuel_saturation = null
+        this.sym = null
+        this.max_pilgrim_range = 5
     }
     turn (step){
+        var units = this.r.getVisibleRobots()
+
+        if (this.sym == null){
+            this.sym = this.r.find_sym(this.r.map)
+        }
+        if (this.resource_saturation == null){
+            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+            this.karbonite_saturation = karbonites.length
+            this.fuel_saturation = fuels.length
+            this.resource_saturation = karbonites.length + fuels.length
+        }
+
+        //var num_enemy_units = [0,0,0,0,0,0]
+        //this.defensive_build = null
+        //for (var i in units){
+        //    if (units[i].team != this.r.me.team){
+        //        atk_loc = [units[i].x, units[i].y]
+        //        num_enemy_units[units[i].unit] ++
+        //        if (units[i].unit == SPECS.CRUSADER){
+        //            this.defensive_build = SPECS.PREACHER
+        //        }
+        //        if (units[i].unit == SPECS.PROPHET){
+        //            this.defensive_build = SPECS.PROPHET
+        //        }
+        //        if (units[i].unit == SPECS.PREACHER){
+        //            this.defensive_build = SPECS.PROPHET
+        //        }
+        //    }
+        //}
+        //var preacher_fcs = this.r.preacher_fire_control(units)
+        //if (preacher_fcs != null){
+        //    this.r.signal_encode("1111", ...preacher_fcs, 100)
+        //}         
+
+        //if ( this.defensive_build != null){
+        //    if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_FUEL){
+        //        this.num_units[this.defensive_build] ++
+        //        return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //    }
+        //}
+
+        var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
+        this.desired_pilgrims = this.resource_saturation * Math.min(1.0, step/40)
+        //this.r.log(this.num_units[SPECS.PILGRIM])
+        //this.r.log(this.desired_pilgrims)
+        if ( p == 0 || (this.num_units[SPECS.PILGRIM]+1 <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
+        {
+            this.num_units[SPECS.PILGRIM] ++
+            if (this.r.karbonite >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_FUEL)
+            {
+                return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+        }
     }
 }
