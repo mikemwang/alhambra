@@ -89,7 +89,7 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     find_good_expansions(sym, resource_maps, allied_castle_list){
-        return this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps), allied_castle_list)
+        var map = this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps), allied_castle_list)
         for (var i = 0; i < map.length; i++){
             for (var j = 0; j < map.length; j++){
                 if (map[j][i] > 0){

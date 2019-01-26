@@ -40,6 +40,7 @@ export class Castle{
 
     turn(step){
         //this.r.log(step)
+        var units = this.r.getVisibleRobots()
 
         // see if damage was taken
         if (this.last_hp == null) {
@@ -56,7 +57,6 @@ export class Castle{
             this.r.allied_castle_finder = new Allied_Castle_Finder(this.r)
         }
 
-        var units = this.r.getVisibleRobots()
 
         this.r.allied_castle_finder.find(units, this.sym)
         if (this.r.allied_castle_finder.done && this.allied_castle_list == null){
@@ -90,25 +90,58 @@ export class Castle{
                     if (this.r.r_squared(0,0,i,j) <= 9 && this.r.in_bounds(x, y) && this.r.karbonite_map[y][x]) this.init_karbs.push([x,y])
                 }
             }
-        }
+        }        
 
-        if (this.r.karbonite == 50){
-            this.all_finished = true
+        // rush defense takes precedence over pilgrim production
+        var atk_loc = null
+        var num_enemy_units = [0,0,0,0,0,0]
+        this.defensive_build = null
+        for (var i in units){
+            if (units[i].team != this.r.me.team){
+                atk_loc = [units[i].x, units[i].y]
+                num_enemy_units[units[i].unit] ++
+                if (units[i].unit == SPECS.CRUSADER){
+                    this.defensive_build = SPECS.PREACHER
+                }
+                if (units[i].unit == SPECS.PROPHET){
+                    this.defensive_build = SPECS.PROPHET
+                }
+                if (units[i].unit == SPECS.PREACHER){
+                    this.defensive_build = SPECS.PROPHET
+                }
+            }
         }
+        var preacher_fcs = this.r.preacher_fire_control(units)
+        if (preacher_fcs != null){
+            this.r.log(preacher_fcs)
+            this.r.signal_encode("1111", ...preacher_fcs, 100)
+        }         
 
-        if (step == 10){
-            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+        if ( this.defensive_build != null){
+            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
+                this.num_units[this.defensive_build] ++
+                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+            if (this.r.in_range(...atk_loc)){
+                return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
+            }
         }
-
-        if (this.num_units[SPECS.PILGRIM] < this.init_karbs.length && !this.all_finished)
+        var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
+        if ( p == 0 || (p < this.init_karbs.length && this.r.karbonite >= 60))
         {
             this.num_units[SPECS.PILGRIM] ++
+
+            if (this.num_units[SPECS.PILGRIM] == this.init_karbs.length) this.all_finished = true
             if (this.r.karbonite >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_KARBONITE)
             {
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
+
         }
 
+        if (this.all_finished && this.allied_castle_list != null){
+            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+        }
 
         return
         if (this.resource_saturation == null){
