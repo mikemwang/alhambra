@@ -29,7 +29,7 @@ export class Castle{
         this.num_finished_econ = 0
         this.num_castles = null
         this.num_units = [0,0,0,0,0,0]
-        this.max_pilgrim_range = 5
+        this.max_pilgrim_range = 3
         this.pilgrim_dispatched
         this.r = r
         this.synced_build = false
@@ -83,11 +83,9 @@ export class Castle{
         }
 
         if (this.resource_saturation == null){
-            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
-            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
-            this.karbonite_saturation = karbonites.length
-            this.fuel_saturation = fuels.length
-            this.resource_saturation = karbonites.length + fuels.length
+            this.karbonite_saturation = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+            this.fuel_saturation =this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+            this.resource_saturation = this.karbonite_saturation + this.fuel_saturation
         }
 
         // initial pilgrims
@@ -158,7 +156,7 @@ export class Castle{
         if (this.check_to_expand){
             this.check_to_expand = false
             if (this.possible_expansions == null){
-                this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+                this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list, this.num_castles)
             }
 
             this.cur_expansion = this.possible_expansions[0].slice()

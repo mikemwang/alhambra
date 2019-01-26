@@ -11,7 +11,7 @@ export class Church{
         this.karbonite_saturation = null
         this.fuel_saturation = null
         this.sym = null
-        this.max_pilgrim_range = 5
+        this.max_pilgrim_range = 3
     }
     turn (step){
         var units = this.r.getVisibleRobots()
@@ -20,46 +20,45 @@ export class Church{
             this.sym = this.r.find_sym(this.r.map)
         }
         if (this.resource_saturation == null){
-            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
-            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
-            this.karbonite_saturation = karbonites.length
-            this.fuel_saturation = fuels.length
-            this.resource_saturation = karbonites.length + fuels.length
+            this.karbonite_saturation = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+            this.fuel_saturation =this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+            this.resource_saturation = this.karbonite_saturation + this.fuel_saturation
         }
 
-        //var num_enemy_units = [0,0,0,0,0,0]
-        //this.defensive_build = null
-        //for (var i in units){
-        //    if (units[i].team != this.r.me.team){
-        //        atk_loc = [units[i].x, units[i].y]
-        //        num_enemy_units[units[i].unit] ++
-        //        if (units[i].unit == SPECS.CRUSADER){
-        //            this.defensive_build = SPECS.PREACHER
-        //        }
-        //        if (units[i].unit == SPECS.PROPHET){
-        //            this.defensive_build = SPECS.PROPHET
-        //        }
-        //        if (units[i].unit == SPECS.PREACHER){
-        //            this.defensive_build = SPECS.PROPHET
-        //        }
-        //    }
-        //}
-        //var preacher_fcs = this.r.preacher_fire_control(units)
-        //if (preacher_fcs != null){
-        //    this.r.signal_encode("1111", ...preacher_fcs, 100)
-        //}         
+        var num_enemy_units = [0,0,0,0,0,0]
+        this.defensive_build = null
+        for (var i in units){
+            if (units[i].team != this.r.me.team){
+                atk_loc = [units[i].x, units[i].y]
+                num_enemy_units[units[i].unit] ++
+                if (units[i].unit == SPECS.CRUSADER){
+                    this.defensive_build = SPECS.PREACHER
+                }
+                if (units[i].unit == SPECS.PROPHET){
+                    this.defensive_build = SPECS.PROPHET
+                }
+                if (units[i].unit == SPECS.PREACHER){
+                    this.defensive_build = SPECS.PROPHET
+                }
+            }
+        }
+        var preacher_fcs = this.r.preacher_fire_control(units)
+        if (preacher_fcs != null){
+            this.r.signal_encode("1111", ...preacher_fcs, 100)
+        }         
 
-        //if ( this.defensive_build != null){
-        //    if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_FUEL){
-        //        this.num_units[this.defensive_build] ++
-        //        return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-        //    }
-        //}
+        if ( this.defensive_build != null){
+            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_FUEL){
+                this.num_units[this.defensive_build] ++
+                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+        }
 
         var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
-        this.desired_pilgrims = this.resource_saturation * Math.min(1.0, step/40)
-        //this.r.log(this.num_units[SPECS.PILGRIM])
-        //this.r.log(this.desired_pilgrims)
+        if (this.desired_pilgrims < this.resource_saturation && step % 5 == 0){
+            this.desired_pilgrims ++
+        }
+
         if ( p == 0 || (this.num_units[SPECS.PILGRIM]+1 <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
         {
             this.num_units[SPECS.PILGRIM] ++

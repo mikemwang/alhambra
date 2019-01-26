@@ -75,7 +75,7 @@ export class Pilgrim{
 
         // retargeting conditions
         if (!this.saturated){
-            if (this.r.fuel < 200){
+            if (this.r.fuel < 300){
                 this.karb_bot = false
             } else if (this.r.karbonite < 100){
                 this.karb_bot = true
@@ -124,7 +124,7 @@ export class Pilgrim{
         var resource_map = this.karb_bot ? this.r.karbonite_map : this.r.fuel_map
 
         // mine phase
-        if ((this.first_run >= 5 && resource < max_resource) || (this.first_run < 5 && resource < 0.5*max_resource && this.karb_bot)){
+        if ((this.first_run >= 3 && resource < max_resource) || (this.first_run < 3 && resource < 0.5*max_resource && this.karb_bot)){
             if (resource_map[this.r.me.y][this.r.me.x]){
                 return this.r.mine()
             }

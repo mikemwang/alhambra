@@ -61,8 +61,9 @@ export class BaseBot extends BCAbstractRobot{
                             if (ignore_goal && this.is_adjacent(newx, newy, x, y)){
                                 return newpath.slice(1)    
                             }
-                            if (newx == x && newy == y && !ignore_goal) {
-                                return newpath.slice(1)
+                            if (newx == x && newy == y) {
+                                if (!ignore_goal) return newpath.slice(1)
+                                continue
                             }
                             new_paths.push(newpath)
                         }
@@ -88,7 +89,7 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
-    find_good_expansions(sym, resource_maps, allied_castle_list){
+    find_good_expansions(sym, resource_maps, allied_castle_list, max){
         var map = this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps), allied_castle_list)
         var list = new DynamicallySortedList()
 
@@ -99,7 +100,9 @@ export class BaseBot extends BCAbstractRobot{
                 }
             }
         }
-        return list.get()
+        var l = list.get().slice()
+        if (l.length <= max) return l
+        return l.slice(0,max)
     }
 
     erode_expansion_score_heat_map(sym, heat_map, allied_castle_list)
@@ -528,14 +531,17 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     resources_in_area(x, y, range, find_karb, sym){
-        var resources = []
-        do{
-            var p = this.flood_fill(x, y, find_karb, resources, sym, range)
-            if (p!=null){
-                resources.push(p[p.length-1].slice())
+        var num = 0
+        for (var i = -range; i<=range; i++){
+            for (var j = -range; j<= range; j++){
+                var a = x + i
+                var b = y + j
+                if (!this.in_bounds(a, b)) continue
+                if (find_karb && this.karbonite_map[b][a]) num ++
+                if (!find_karb && this.fuel_map[b][a]) num ++
             }
-        }while(p!=null)
-        return resources
+        }
+        return num
     }
 
     kite(enemy_loc)
