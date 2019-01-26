@@ -1,5 +1,12 @@
 import {SPECS} from 'battlecode'
 import {Allied_Castle_Finder} from 'funcfile.js'
+//import { join } from 'path';
+
+/* castletalk key:
+*   255: synced build
+*   254: finished econ (saturated nearby karbs)
+*   252: someone has spent the anti-rush budget
+*/
  
 
 export class Castle{
@@ -16,6 +23,8 @@ export class Castle{
         this.defended_rush = false
         this.economy = true
         this.enemy_castle_list = null
+        this.fuel_saturation = null
+        this.karbonite_saturation = null
         this.latest_possible_rush = 25
         this.num_finished_econ = 0
         this.num_castles = null
@@ -29,17 +38,23 @@ export class Castle{
         this.rush_distance = null
         this.sym = null
         this.last_hp = null
+        this.expand = false
     }
 
     turn(step){
         this.r.log(step)
+        if (this.rush_distance != null && step > this.rush_distance + 8)
+        {
+            this.expand = true
+            this.anti_rush_budget = 0
+        }
+
         if (this.last_hp == null) {
             this.last_hp = this.r.me.health
         }
         var damage_taken = this.r.me.health != this.last_hp
         this.last_hp = this.r.me.health
 
-        this.defensive_build = null
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
         }
@@ -74,7 +89,9 @@ export class Castle{
         if (this.resource_saturation == null){
             var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
             var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
-            this.resource_saturation = karbonites.length + fuels.length
+            this.karbonite_saturation = karbonites.length
+            this.fuel_saturation = fuels.length
+            this.resource_saturation = this.karbonite_saturation
             if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...karbonites[0])){
                 this.num_units[SPECS.PILGRIM] ++
                 return this.r.buildUnit(SPECS.PILGRIM, karbonites[0][0] - this.r.me.x, karbonites[0][1] - this.r.me.y)
@@ -89,7 +106,7 @@ export class Castle{
                     }
                     if (step > this.latest_possible_rush || units[i].id != this.r.me.id && units[i].castle_talk == 252){
                         this.defended_rush = true
-                        this.anti_rush_budget = 30
+                        this.anti_rush_budget = 0
                     }
                 }
                 if (this.r.karbonite >=(this.anti_rush_budget + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
@@ -107,6 +124,7 @@ export class Castle{
 
         var atk_loc = null
         var num_enemy_units = [0,0,0,0,0,0]
+        this.defensive_build = null
         for (var i in units){
             if (units[i].team != this.r.me.team){
                 atk_loc = [units[i].x, units[i].y]
@@ -118,23 +136,17 @@ export class Castle{
                     this.defensive_build = SPECS.PROPHET
                 }
                 if (units[i].unit == SPECS.PREACHER){
-                    this.defensive_build = SPECS.PREACHER
+                    this.defensive_build = SPECS.PROPHET
                 }
             }
         }
         var preacher_fcs = this.r.preacher_fire_control(units)
         if (preacher_fcs != null){
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
             this.r.log(preacher_fcs)
             this.r.signal_encode("1111", ...preacher_fcs, 100)
         }         
-        if (this.defensive_build != null){
+
+        if ( this.defensive_build != null){
             if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
                 if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
                     this.num_units[this.defensive_build] ++
@@ -146,6 +158,17 @@ export class Castle{
             }
             if (this.r.in_range(...atk_loc)){
                 return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
+            }
+        }
+
+        if ( this.expand )
+        {
+            if ( !this.rush_castle )
+            {
+                for ( var i in units )
+                {
+                    var unit = units[i]
+                }
             }
         }
 
@@ -171,7 +194,6 @@ export class Castle{
                 this.num_units[SPECS.PROPHET] ++
                 this.synced_build = false
                 return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-
             }
         }
 
@@ -185,23 +207,5 @@ export class Castle{
         }
 
         return
-        if (!this.applied){
-            for (var i in this.r.map){
-                for (var j in this.r.map){
-                    var score = 0
-                    for (var k in this.resource_kernel){
-                        for (var l in this.resource_kernel){
-                            var coeff = this.resource_kernel[l][k]
-                            var x = i + k - 2
-                            var y = j + l - 2
-                            if (!this.r.in_bounds(x, y)) continue
-                            if (this.r.karbonite_map[y][x]) {
-                                score += coeff
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

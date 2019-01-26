@@ -92,7 +92,7 @@ export class Castle{
                     }
                     if (step > this.latest_possible_rush || units[i].id != this.r.me.id && units[i].castle_talk == 252){
                         this.defended_rush = true
-                        this.anti_rush_budget = 30
+                        this.anti_rush_budget = 0
                     }
                 }
                 if (this.r.karbonite >=(this.anti_rush_budget + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
@@ -115,37 +115,29 @@ export class Castle{
                 atk_loc = [units[i].x, units[i].y]
                 num_enemy_units[units[i].unit] ++
                 if (units[i].unit == SPECS.CRUSADER){
-                    this.defensive_build = SPECS.PREACHER
+                    this.defensive_build = SPECS.PROPHET
                 }
                 if (units[i].unit == SPECS.PROPHET){
                     this.defensive_build = SPECS.PROPHET
                 }
                 if (units[i].unit == SPECS.PREACHER){
-                    this.defensive_build = SPECS.PREACHER
+                    this.defensive_build = SPECS.PROPHET
                 }
             }
         }
-        var preacher_fcs = this.r.preacher_fire_control(units)
-        if (preacher_fcs != null){
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log("found")
-            this.r.log(preacher_fcs)
-            this.r.signal_encode("1111", ...preacher_fcs, 100)
-        }
+        //var preacher_fcs = this.r.preacher_fire_control(units)
+        //if (preacher_fcs != null){
+        //    this.r.signal_encode("1111", ...preacher_fcs, 100)
+        //}
+        this.r.signal(this.r.get_visible_allied_units(units, this.defensive_build), 0)
         if (this.defensive_build != null){
-            if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
-                if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
-                    this.num_units[this.defensive_build] ++
-                    if ((this.num_units[this.defensive_build]*SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE) >= 90 || step > 25) {
-                        this.r.castleTalk(252)  // anti-rush budget exceeded
-                    }
-                    return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
+                this.num_units[this.defensive_build] ++
+                if ((this.num_units[this.defensive_build]*SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE) >= 90 || step > 25) {
+                    this.r.castleTalk(252)  // anti-rush budget exceeded
                 }
+                this.r.log(this.defensive_build);
+                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
             if (this.r.in_range(...atk_loc)){
                 return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
@@ -177,6 +169,8 @@ export class Castle{
 
             }
         }
+
+        return
 
         for (var i in this.r.map){
             for (var j in this.r.map){

@@ -15,13 +15,20 @@ export class Prophet{
 
         var units = this.r.getVisibleRobots()
 
-        var atk = this.r.get_closest_attackable_enemy_unit(units, this.priority_list)
-
-        if (atk != null){
-            var new_fire_control = this.r.preacher_fire_control(units)
-            if (new_fire_control != null){
-                this.r.signal_encode("1111", ...new_fire_control, 16)
+        if (this.r.should_i_run_the_fuck_away(units)) 
+        {
+            var path = this.r.run_the_fuck_away(this.r.get_closest_attackable_enemy_unit(units, [0,0,0,0,0,0]))
+            if (path != null) {
+                return this.r.move(path[0] - this.r.me.x, path[1] - this.r.me.y)
             }
+        }
+
+        var atk = this.r.get_closest_attackable_enemy_unit(units, this.priority_list)
+        if (atk != null){
+            //var new_fire_control = this.r.preacher_fire_control(units)
+            //if (new_fire_control != null){
+            //    this.r.signal_encode("1111", ...new_fire_control, 16)
+            //}
             return this.r.attack(atk[0]-this.r.me.x, atk[1]-this.r.me.y)
         }
 
@@ -29,6 +36,5 @@ export class Prophet{
             var path = this.r.flood_fill(this.r.me.x, this.r.me.y, null, this.lattice_occupancy, this.sym, 90)
             if (path != null) return this.r.move(path[0][0]-this.r.me.x, path[0][1]-this.r.me.y)
         }
-
     }
 }

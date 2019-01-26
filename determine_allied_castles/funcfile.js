@@ -82,6 +82,55 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
+    find_good_expansions(sym)
+    {
+        var xbounds = [0, this.map.length-1]
+        var ybounds = [0, this.map.length-1]
+        if (sym == 'x')
+        {
+            if (this.me.y < this.map.length / 2)
+            {
+                ybounds = [0, Math.floor(this.map.length/2) + 3]
+            }
+            else
+            {
+                ybounds = [Math.floor(this.map.length /2) - 3, this.map.length-1]
+            }
+        }
+        else
+        {
+            if (this.me.x < this.map.length / 2)
+            {
+                xbounds = [0, Math.floor(this.map.length/2) + 3]
+            }
+            else
+            {
+                xbounds = [Math.floor(this.map.length /2) - 3, this.map.length-1]
+            }
+            
+        }
+
+        var scores = new Array(this.map.length).fill(new Array(this.map.length).fill(0))
+         
+        for (var i in xbounds){
+            for (var j in ybounds){
+                var score = 0
+                for (var k in this.resource_kernel){
+                    for (var l in this.resource_kernel){
+                        var coeff = this.resource_kernel[l][k]
+                        var x = i + k - 2
+                        var y = j + l - 2
+                        if (!this.r.in_bounds(x, y)) continue
+                        if (this.r.karbonite_map[y][x]) {
+                            score += coeff
+                        }
+                    }
+                }
+                scores[j][i] = score
+            }
+        }
+    }
+
     find_sym(map) {
         for (var i = 0; i < map.length; i++){
             for (var j = 0; j < map.length; j++){
@@ -94,31 +143,6 @@ export class BaseBot extends BCAbstractRobot{
         return 'x'
     }
 
-    preacher_fire_control(units){
-        var attack_square = null
-        for (var i in units){
-            var unit = units[i]
-            if (unit.team != this.me.team){
-                for (var j in units){
-                    var allied_unit = units[j]
-                    if (allied_unit.team == this.me.team && allied_unit.unit == SPECS.PREACHER){
-                        is_there_a_preacher = true
-                        var r = this.r_squared(allied_unit.x, allied_unit.y, unit.x, unit.y)
-                        if (r > 16 && r <=27){
-                            for (var k in this.mvmt_choices){
-                                var choice = this.mvmt_choices[k]
-                                if (this.r_squared(allied_unit.x, allied_unit.y, unit.x+choice[0], unit.y+choice[1]) <= 16){
-                                    attack_square = [unit.x+choice[0], unit.y+choice[1]]
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return attack_square
-    }
 
     flood_fill(startx, starty, find_karb=true, occupied_list = [], sym, max_range) {
         if (find_karb != null){
@@ -159,7 +183,7 @@ export class BaseBot extends BCAbstractRobot{
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                var choices = this.random_ordering(this.mvmt_choices)
+                var choices = this.random_ordering(this.fast_mvmt_choices)
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
@@ -210,7 +234,7 @@ export class BaseBot extends BCAbstractRobot{
                     bot_at_loc = priority_list[units[i].unit] 
                 } else if (priority_list[units[i].unit] == bot_at_loc){
                     var e = this.r_squared(units[i].x, units[i].y, this.me.x, this.me.y)
-                    if (this.in_range(units[i].x, uints[i].y) && e >= min){
+                    if (this.in_range(units[i].x, units[i].y) && e >= d){
                         d = e
                         loc = [units[i].x, units[i].y]
                         bot_at_loc = priority_list[units[i].unit] 
@@ -352,6 +376,31 @@ export class BaseBot extends BCAbstractRobot{
         return signal.toString(2).slice(0,4)
     }
 
+    preacher_fire_control(units){
+        var attack_square = null
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team != this.me.team){
+                for (var j in units){
+                    var allied_unit = units[j]
+                    if (allied_unit.team == this.me.team && allied_unit.unit == SPECS.PREACHER){
+                        var r = this.r_squared(allied_unit.x, allied_unit.y, unit.x, unit.y)
+                        if (r > 16 && r <=27){
+                            for (var k in this.mvmt_choices){
+                                var choice = this.mvmt_choices[k]
+                                if (this.r_squared(allied_unit.x, allied_unit.y, unit.x+choice[0], unit.y+choice[1]) <= 16){
+                                    attack_square = [unit.x+choice[0], unit.y+choice[1]]
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return attack_square
+    }
+
     r_squared(x1, y1, x2, y2){
         return Math.pow(x1-x2, 2) + Math.pow(y1-y2,2)
     }
@@ -385,6 +434,45 @@ export class BaseBot extends BCAbstractRobot{
             }
         }while(p!=null)
         return resources
+    }
+
+    run_the_fuck_away(enemy_loc)
+    {
+        var best_d = 0
+        var coord = null
+        var map = this.getVisibleRobotMap()
+        for (var i in this.fast_mvmt_choices)
+        {
+            var c = this.fast_mvmt_choices[i]
+            if (this.traversable(this.me.x+c[0], this.me.y+c[1], map)){
+                var d = this.r_squared(this.me.x+c[0], this.me.y+c[1], ...enemy_loc)
+                if (d > best_d)
+                {
+                    best_d = d
+                    coord = [this.me.x+c[0], this.me.y+c[1]]
+                }
+            }
+        }
+        return coord
+    }
+
+    should_i_run_the_fuck_away(units){
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team != this.me.team)
+            {
+                if (unit.unit == SPECS.PREACHER || unit.unit == SPECS.PILGRIM)
+                {
+                    if (this.r_squared(this.me.x, this.me.y, unit.x, unit.y) <= 27)  // one block outside of min range
+                    {
+                        if (this.in_range(this.me.x, this.me.y, unit.x, unit.y)) {
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 
 
