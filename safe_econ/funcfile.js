@@ -88,7 +88,75 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
-    find_good_expansions(sym, resource_maps)
+    find_good_expansions(sym, resource_maps){
+        return this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps))
+    }
+
+    erode_expansion_score_heat_map(sym, heat_map)
+    {
+        var xbounds = [0, this.map.length-1]
+        var ybounds = [0, this.map.length-1]
+        if (sym == 'x')
+        {
+            if (this.me.y < this.map.length / 2)
+            {
+                ybounds = [0, Math.floor(this.map.length/2) + 3]
+            }
+            else
+            {
+                ybounds = [Math.floor(this.map.length /2) - 3, this.map.length-1]
+            }
+        }
+        else
+        {
+            if (this.me.x < this.map.length / 2)
+            {
+                xbounds = [0, Math.floor(this.map.length/2) + 3]
+            }
+            else
+            {
+                xbounds = [Math.floor(this.map.length /2) - 3, this.map.length-1]
+            }
+        }
+
+        var scores = []
+        for (var i = 0; i < this.map.length; i++)
+        {
+            scores[i] = new Array(this.map.length).fill(0)
+        }
+
+        for (var i = xbounds[0]; i<=xbounds[1]; i++){
+            for (var j = ybounds[0]; j<=ybounds[1]; j++){
+                var cur_score = heat_map[j][i]
+                var valid = true
+                for (var k = 0; k < this.resource_kernel.length; k ++){
+                    for (var l = 0; l < this.resource_kernel.length; l++){
+                        var x = i + k - 2
+                        var y = j + l - 2
+                        if (!this.in_bounds(x, y)) continue
+                        if (heat_map[y][x] > cur_score)
+                        {
+                            // find peaks
+                            scores[j][i] = 0 
+                            valid = false
+                            break
+                        } 
+                        if (scores[y][x] == cur_score)
+                        {
+                            // reduce repeats
+                            scores[j][i] = 0
+                            valid = false
+                            break
+                        }
+                    }
+                    if (!valid) break
+                }
+                if (valid) scores[j][i] = cur_score
+            }
+        }
+        return scores
+    }
+    expansion_score_heat_map(sym, resource_maps)
     {
         var xbounds = [0, this.map.length-1]
         var ybounds = [0, this.map.length-1]

@@ -96,6 +96,10 @@ export class Castle{
             this.all_finished = true
         }
 
+        if (step == 10){
+            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map])
+        }
+
         if (this.num_units[SPECS.PILGRIM] < this.init_karbs.length && !this.all_finished)
         {
             this.num_units[SPECS.PILGRIM] ++
