@@ -329,8 +329,10 @@ export class BaseBot extends BCAbstractRobot{
         for (var i in units){
             if (units[i].team != this.me.team){
                 if (priority_list[units[i].unit] > bot_at_loc) {
-                    loc = [units[i].x, units[i].y]
-                    bot_at_loc = priority_list[units[i].unit] 
+                    if (this.in_range(units[i].x, units[i].y)){
+                        loc = [units[i].x, units[i].y]
+                        bot_at_loc = priority_list[units[i].unit] 
+                    }
                 } else if (priority_list[units[i].unit] == bot_at_loc){
                     var e = this.r_squared(units[i].x, units[i].y, this.me.x, this.me.y)
                     if (this.in_range(units[i].x, units[i].y) && e >= d){

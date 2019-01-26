@@ -29,6 +29,12 @@ export class Pilgrim{
                 return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
             }
         }
+        if (this.r.me.x == this.target_expansion[0] && this.r.me.y == this.target_expansion[1]){
+            var d = this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y)
+            if (d != null){
+                return this.r.move(...d)
+            }
+        }
         var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)        
         if (path != null){
             return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)

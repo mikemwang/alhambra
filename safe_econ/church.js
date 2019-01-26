@@ -39,6 +39,7 @@ export class Church{
         }
 
         var num_enemy_units = [0,0,0,0,0,0]
+        var atk_loc = null
         this.defensive_build = null
         for (var i in units){
             if (units[i].team != this.r.me.team){
@@ -68,16 +69,28 @@ export class Church{
         }
 
         var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
-        if (this.desired_pilgrims < this.resource_saturation && step % 5 == 0){
+        if (this.desired_pilgrims < this.resource_saturation && step % 10 == 0){
             this.desired_pilgrims ++
         }
 
-        if ( p == 0 || (this.num_units[SPECS.PILGRIM]+1 <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
+        if ( p == 0 || (Math.min(this.num_units[SPECS.PILGRIM]+1, p+1) <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
         {
             this.num_units[SPECS.PILGRIM] ++
             if (this.r.karbonite >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[SPECS.PILGRIM].CONSTRUCTION_FUEL)
             {
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+        }
+
+        for (var i in units){
+            var unit = units[i]
+            if (this.r.isRadioing(unit)){
+                var header = this.r.parse_header(unit.signal)
+                if (header == '1111'){
+                    var q = Math.random()
+                    if (q < 1) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                    return this.r.buildUnit(SPECS.CRUSADER, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                }
             }
         }
         return

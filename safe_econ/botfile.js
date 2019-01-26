@@ -4,6 +4,7 @@ import {Pilgrim} from 'pilgrim.js'
 import {Prophet} from 'prophet.js'
 import {Preacher} from 'preacher.js'
 import {Church} from 'church.js'
+import {Crusader} from 'crusader.js'
 
 export function create_bot(bot){
     if (bot.me.unit === SPECS.CASTLE){
@@ -20,5 +21,8 @@ export function create_bot(bot){
     }
     if (bot.me.unit === SPECS.CHURCH){
         return new Church(bot)
+    }
+    if (bot.me.unit === SPECS.CRUSADER){
+        return new Crusader(bot)
     }
 }
