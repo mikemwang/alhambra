@@ -18,6 +18,11 @@ export class Pilgrim{
     }
 
     expand_phase(step, units){
+        if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.target_expansion)){
+            this.r.log("built church")
+            this.expanding = false
+            return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
+        }
         var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)        
         if (path != null){
             return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
@@ -55,7 +60,6 @@ export class Pilgrim{
         // normal resource gathering below this line
 
         if (this.home_depo == null) {
-            var units = this.r.getVisibleRobots()
             for (var i in units) {
                 if (units[i].unit == SPECS.CASTLE || units[i].unit == SPECS.CHURCH){
                     this.home_depo = [units[i].x, units[i].y]

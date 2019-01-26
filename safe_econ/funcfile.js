@@ -61,7 +61,7 @@ export class BaseBot extends BCAbstractRobot{
                             if (ignore_goal && this.is_adjacent(newx, newy, x, y)){
                                 return newpath.slice(1)    
                             }
-                            if (newx == x && newy == y) {
+                            if (newx == x && newy == y && !ignore_goal) {
                                 return newpath.slice(1)
                             }
                             new_paths.push(newpath)

@@ -47,7 +47,8 @@ export class Prophet{
 
         if (this.bodyguard) {
             var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)
-            if (path != null) return this.r.move(path[0][0]-this.r.me.x, path[0][1]-this.r.me.y)
+            if (path != null && path[0][0] != this.target_expansion[0] && path[0][1] != this.target_expansion[1]) return this.r.move(path[0][0]-this.r.me.x, path[0][1]-this.r.me.y)
+            return
         }
 
         if (this.r.me.x%2 != 0 || this.r.me.y%2 != 0 ||this.r.karbonite_map[this.r.me.y][this.r.me.x] || this.r.fuel_map[this.r.me.y][this.r.me.x] ){
