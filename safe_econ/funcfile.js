@@ -88,11 +88,18 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
-    find_good_expansions(sym, resource_maps){
-        return this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps))
+    find_good_expansions(sym, resource_maps, allied_castle_list){
+        return this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps), allied_castle_list)
+        for (var i = 0; i < map.length; i++){
+            for (var j = 0; j < map.length; j++){
+                if (map[j][i] > 0){
+                    
+                }
+            }
+        }
     }
 
-    erode_expansion_score_heat_map(sym, heat_map)
+    erode_expansion_score_heat_map(sym, heat_map, allied_castle_list)
     {
         var xbounds = [0, this.map.length-1]
         var ybounds = [0, this.map.length-1]
@@ -147,6 +154,13 @@ export class BaseBot extends BCAbstractRobot{
                             scores[j][i] = 0
                             valid = false
                             break
+                        }
+                        for (var castle in allied_castle_list){
+                            var c = allied_castle_list[castle]
+                            if (x == c[0] && y == c[1]){
+                                valid = false
+                                break
+                            }
                         }
                     }
                     if (!valid) break

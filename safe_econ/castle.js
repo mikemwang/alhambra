@@ -39,7 +39,7 @@ export class Castle{
     }
 
     turn(step){
-        this.r.log(step)
+        //this.r.log(step)
 
         // see if damage was taken
         if (this.last_hp == null) {
@@ -97,7 +97,7 @@ export class Castle{
         }
 
         if (step == 10){
-            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map])
+            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
         }
 
         if (this.num_units[SPECS.PILGRIM] < this.init_karbs.length && !this.all_finished)
