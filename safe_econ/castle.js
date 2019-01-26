@@ -140,7 +140,7 @@ export class Castle{
         }
 
         if (this.all_finished && this.allied_castle_list != null){
-            this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+            this.r.log(this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list))
         }
 
         return

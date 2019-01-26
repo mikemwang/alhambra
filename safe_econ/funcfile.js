@@ -90,13 +90,16 @@ export class BaseBot extends BCAbstractRobot{
 
     find_good_expansions(sym, resource_maps, allied_castle_list){
         var map = this.erode_expansion_score_heat_map(sym, this.expansion_score_heat_map(sym, resource_maps), allied_castle_list)
+        var list = new DynamicallySortedList()
+
         for (var i = 0; i < map.length; i++){
             for (var j = 0; j < map.length; j++){
                 if (map[j][i] > 0){
-                    
+                    list.add([i,j], map[j][i])
                 }
             }
         }
+        return list.get()
     }
 
     erode_expansion_score_heat_map(sym, heat_map, allied_castle_list)
@@ -696,5 +699,38 @@ export class ActionContainer{
     constructor (action=null, priority){
         this.action = action
         this.priority = priority
+    }
+}
+
+class DynamicallySortedList{
+    constructor ()
+    {
+        this.list = null
+        this.scores = null
+    }
+    add(item, score){
+        if (this.list == null){
+            this.list = [item.slice()]
+            this.scores = [score]
+            return
+        }
+
+        var inserted = false
+        for (var i in this.scores){
+            var s = this.scores[i]
+            if (score > s){
+                this.scores.splice(Number(i), 0, score)
+                this.list.splice(Number(i), 0, item.slice())
+                inserted = true
+                break
+            }
+        }
+        if (!inserted){
+            this.scores.push(score)
+            this.list.push(item.slice())
+        }
+    }
+    get(){
+        return this.list
     }
 }
