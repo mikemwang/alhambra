@@ -421,6 +421,12 @@ export class BaseBot extends BCAbstractRobot{
         return false
     }
 
+    map_distance(x1, y1, x2, y2){
+        var dx = Math.abs(x2-x1)
+        var dy = Math.abs(y2-y1)
+        return Math.min(dx, dy) + (Math.max(dx,dy) - Math.min(dx, dy))
+    }
+
     move_to_attack_range(startx, starty, goalx, goaly, stationary) {
         var paths = [[[startx, starty]]]
 

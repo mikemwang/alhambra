@@ -13,12 +13,16 @@ export class Castle{
     constructor(r){
         this.allied_castle_list = null
         this.all_finished = false
+        this.am_expanding = false
         this.anti_rush_budget = 100
         this.castle_turn_order = null
+        this.check_to_expand = false
+        this.contested_expansion = false
         this.defensive_build = null
         this.defended_rush = false
         this.economy = true
         this.enemy_castle_list = null
+        this.possible_expansions = null
         this.fuel_saturation = null
         this.init_karbs = null
         this.karbonite_saturation = null
@@ -75,6 +79,7 @@ export class Castle{
             }
             this.rush_distance = d
             this.rush_castle = castle[0] == this.r.me.x && castle[1] == this.r.me.y
+            this.check_to_expand = true
         }
 
         // initial pilgrims
@@ -136,132 +141,172 @@ export class Castle{
             {
                 return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }
-
         }
 
-        if (this.all_finished && this.allied_castle_list != null){
-            this.r.log(this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list))
+        if (this.check_to_expand){
+            this.check_to_expand = false
+            this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list)
+
+            var cur_expansion = this.possible_expansions[0].slice()
+            this.possible_expansions = this.possible_expansions.slice(1) // we have occupied the first one
+
+            var best_d = 999
+            var best_castle = []
+            for (var i in this.allied_castle_list){
+                var castle = this.allied_castle_list[i]
+                var d = this.r.map_distance(...castle, ...cur_expansion)
+                if (d < best_d){
+                    best_d = d
+                    best_castle = castle.slice()
+                }
+            }
+
+            if (best_castle[0] == this.r.me.x && best_castle[1] == this.r.me.y){
+                this.am_expanding = true
+            }
+
+            var test_coord = 0
+            if (this.sym == 'x') {
+                test_coord = 1
+            }
+
+            if (Math.abs(cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.5*this.r.map.length) this.contested_expansion = true
+            //this.r.log("castle")
+            //this.r.log(best_castle)
+            //this.r.log("tried expansion at ")
+            //this.r.log(cur_expansion)
+            //if (this.am_expanding){
+            //    this.r.log("i am the closest")
+            //} else {
+            //    this.r.log("i am not the closest")
+            //}
+            //if (this.contested_expansion){
+            //    this.r.log("requires escort")
+            //} else {
+            //    this.r.log("does not require escort")
+            //}
         }
+
 
         return
-        if (this.resource_saturation == null){
-            var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
-            var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
-            this.karbonite_saturation = karbonites.length
-            this.fuel_saturation = fuels.length
-            this.resource_saturation = this.karbonite_saturation
-            if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...karbonites[0])){
-                this.num_units[SPECS.PILGRIM] ++
-                return this.r.buildUnit(SPECS.PILGRIM, karbonites[0][0] - this.r.me.x, karbonites[0][1] - this.r.me.y)
-            }
-        }
+        //if (this.resource_saturation == null){
+        //    var karbonites = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, true, this.sym)
+        //    var fuels = this.r.resources_in_area(this.r.me.x, this.r.me.y, this.max_pilgrim_range, false, this.sym)
+        //    this.karbonite_saturation = karbonites.length
+        //    this.fuel_saturation = fuels.length
+        //    this.resource_saturation = this.karbonite_saturation
+        //    if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...karbonites[0])){
+        //        this.num_units[SPECS.PILGRIM] ++
+        //        return this.r.buildUnit(SPECS.PILGRIM, karbonites[0][0] - this.r.me.x, karbonites[0][1] - this.r.me.y)
+        //    }
+        //}
 
 
 
-        return
+        //return
 
-        if (this.num_castles != null){
-            if (this.castle_turn_order == 0){
-                for (var i in units){
-                    if (units[i].id != this.r.me.id && units[i].castle_talk == 254){
-                        this.num_finished_econ ++
-                    }
-                    if (step > this.latest_possible_rush || units[i].id != this.r.me.id && units[i].castle_talk == 252){
-                        this.defended_rush = true
-                        this.anti_rush_budget = 0
-                    }
-                }
-                if (this.r.karbonite >=(this.anti_rush_budget + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
-                    this.r.castleTalk(255)
-                    this.synced_build = true
-                }
-            } else {
-                for (var i in units){
-                    if (units[i].id != this.r.me.id && units[i].castle_talk == 255){
-                        this.synced_build = true
-                    }
-                }
-            }
-        }
+        //if (this.num_castles != null){
+        //    if (this.castle_turn_order == 0){
+        //        for (var i in units){
+        //            if (units[i].id != this.r.me.id && units[i].castle_talk == 254){
+        //                this.num_finished_econ ++
+        //            }
+        //            if (step > this.latest_possible_rush || units[i].id != this.r.me.id && units[i].castle_talk == 252){
+        //                this.defended_rush = true
+        //                this.anti_rush_budget = 0
+        //            }
+        //        }
+        //        if (this.r.karbonite >=(this.anti_rush_budget + (this.num_castles-this.num_finished_econ)*10 + this.num_finished_econ*25)){
+        //            this.r.castleTalk(255)
+        //            this.synced_build = true
+        //        }
+        //    } else {
+        //        for (var i in units){
+        //            if (units[i].id != this.r.me.id && units[i].castle_talk == 255){
+        //                this.synced_build = true
+        //            }
+        //        }
+        //    }
+        //}
 
-        var atk_loc = null
-        var num_enemy_units = [0,0,0,0,0,0]
-        this.defensive_build = null
-        for (var i in units){
-            if (units[i].team != this.r.me.team){
-                atk_loc = [units[i].x, units[i].y]
-                num_enemy_units[units[i].unit] ++
-                if (units[i].unit == SPECS.CRUSADER){
-                    this.defensive_build = SPECS.PREACHER
-                }
-                if (units[i].unit == SPECS.PROPHET){
-                    this.defensive_build = SPECS.PROPHET
-                }
-                if (units[i].unit == SPECS.PREACHER){
-                    this.defensive_build = SPECS.PROPHET
-                }
-            }
-        }
-        var preacher_fcs = this.r.preacher_fire_control(units)
-        if (preacher_fcs != null){
-            this.r.log(preacher_fcs)
-            this.r.signal_encode("1111", ...preacher_fcs, 100)
-        }         
+        //var atk_loc = null
+        //var num_enemy_units = [0,0,0,0,0,0]
+        //this.defensive_build = null
+        //for (var i in units){
+        //    if (units[i].team != this.r.me.team){
+        //        atk_loc = [units[i].x, units[i].y]
+        //        num_enemy_units[units[i].unit] ++
+        //        if (units[i].unit == SPECS.CRUSADER){
+        //            this.defensive_build = SPECS.PREACHER
+        //        }
+        //        if (units[i].unit == SPECS.PROPHET){
+        //            this.defensive_build = SPECS.PROPHET
+        //        }
+        //        if (units[i].unit == SPECS.PREACHER){
+        //            this.defensive_build = SPECS.PROPHET
+        //        }
+        //    }
+        //}
+        //var preacher_fcs = this.r.preacher_fire_control(units)
+        //if (preacher_fcs != null){
+        //    this.r.log(preacher_fcs)
+        //    this.r.signal_encode("1111", ...preacher_fcs, 100)
+        //}         
 
-        if ( this.defensive_build != null){
-            if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
-                if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
-                    this.num_units[this.defensive_build] ++
-                    if ((this.num_units[this.defensive_build]*SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE) >= 90 || step > 25) {
-                        this.r.castleTalk(252)  // anti-rush budget exceeded
-                    }
-                    return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-                }
-            }
-            if (this.r.in_range(...atk_loc)){
-                return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
-            }
-        }
+        //if ( this.defensive_build != null){
+        //    if (this.r.get_visible_allied_units(units, this.defensive_build) < num_enemy_units[num_enemy_units.indexOf(Math.max(...num_enemy_units))] + 2){
+        //        if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE){
+        //            this.num_units[this.defensive_build] ++
+        //            if ((this.num_units[this.defensive_build]*SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE) >= 90 || step > 25) {
+        //                this.r.castleTalk(252)  // anti-rush budget exceeded
+        //            }
+        //            return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //        }
+        //    }
+        //    if (this.r.in_range(...atk_loc)){
+        //        return this.r.attack(atk_loc[0] - this.r.me.x, atk_loc[1] - this.r.me.y)
+        //    }
+        //}
 
-        if ( step == 30)
-        {
-            this.r.find_good_expansions(this.sym, [this.r.karbonite_map, this.r.fuel_map])
-        }
+        //if ( step == 30)
+        //{
+        //    this.r.find_good_expansions(this.sym, [this.r.karbonite_map, this.r.fuel_map])
+        //}
 
-        this.economy = this.r.get_visible_allied_units(units, SPECS.PILGRIM) < this.resource_saturation
+        //this.economy = this.r.get_visible_allied_units(units, SPECS.PILGRIM) < this.resource_saturation
 
-        if (this.synced_build && this.rush_castle && step <= this.latest_possible_rush){
-            this.synced_build_rush = true
-        }
+        //if (this.synced_build && this.rush_castle && step <= this.latest_possible_rush){
+        //    this.synced_build_rush = true
+        //}
 
-        if (this.synced_build || this.synced_build_rush){
-            if (!this.synced_build){
-                this.synced_build_rush = false
-            }
-            if (this.economy && this.synced_build){
-                if (this.r.get_visible_allied_units(units, SPECS.PILGRIM) == (this.resource_saturation -1)){
-                    if (this.castle_turn_order != 0) this.r.castleTalk(254)
-                    this.num_finished_econ ++
-                    this.num_finished_econ = Math.min(this.num_finished_econ, this.num_castles)
-                }
-                this.synced_build = false
-                return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-            } else {
-                this.num_units[SPECS.PROPHET] ++
-                this.synced_build = false
-                return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-            }
-        }
+        //if (this.synced_build || this.synced_build_rush){
+        //    if (!this.synced_build){
+        //        this.synced_build_rush = false
+        //    }
+        //    if (this.economy && this.synced_build){
+        //        if (this.r.get_visible_allied_units(units, SPECS.PILGRIM) == (this.resource_saturation -1)){
+        //            if (this.castle_turn_order != 0) this.r.castleTalk(254)
+        //            this.num_finished_econ ++
+        //            this.num_finished_econ = Math.min(this.num_finished_econ, this.num_castles)
+        //        }
+        //        this.synced_build = false
+        //        return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //    } else {
+        //        this.num_units[SPECS.PROPHET] ++
+        //        this.synced_build = false
+        //        return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //    }
+        //}
 
-        return
+        //return
 
 
-        if (this.r.karbonite >= 10 && this.r.fuel >= 50 && this.built < 2){
-            this.r.log("building pilgrim")
-            this.built ++
-            return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-        }
+        //if (this.r.karbonite >= 10 && this.r.fuel >= 50 && this.built < 2){
+        //    this.r.log("building pilgrim")
+        //    this.built ++
+        //    return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+        //}
 
-        return
+        //return
     }
 }
