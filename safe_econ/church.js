@@ -69,7 +69,7 @@ export class Church{
         }
 
         var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
-        if (this.desired_pilgrims < this.resource_saturation && step % 10 == 0){
+        if (this.desired_pilgrims < this.resource_saturation && step % 7 == 0){
             this.desired_pilgrims ++
         }
 
@@ -88,7 +88,7 @@ export class Church{
                 var header = this.r.parse_header(unit.signal)
                 if (header == '1111'){
                     var q = Math.random()
-                    if (q < 1) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                    if (q < 0) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                     return this.r.buildUnit(SPECS.CRUSADER, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 }
             }

@@ -718,11 +718,11 @@ export class ActionContainer{
 class DynamicallySortedList{
     constructor ()
     {
-        this.list = null
-        this.scores = null
+        this.list = []
+        this.scores = []
     }
     add(item, score){
-        if (this.list == null){
+        if (this.list.length == 0){
             this.list = [item.slice()]
             this.scores = [score]
             return

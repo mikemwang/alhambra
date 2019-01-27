@@ -172,31 +172,35 @@ export class Castle{
                 this.num_expansions = this.possible_expansions.length
             }
 
-            this.cur_expansion = this.possible_expansions[0].slice()
-            this.possible_expansions = this.possible_expansions.slice(1) // we have occupied the first one
+            if (this.all_expansions.length == 0){
+                this.finished_expand_turn = step
+            } else {
+                this.cur_expansion = this.possible_expansions[0].slice()
+                this.possible_expansions = this.possible_expansions.slice(1) // we have occupied the first one
 
-            var best_d = 999
-            var best_castle = []
-            for (var i in this.allied_castle_list){
-                var castle = this.allied_castle_list[i]
-                var d = this.r.map_distance(...castle, ...this.cur_expansion)
-                if (d < best_d){
-                    best_d = d
-                    best_castle = castle.slice()
+                var best_d = 999
+                var best_castle = []
+                for (var i in this.allied_castle_list){
+                    var castle = this.allied_castle_list[i]
+                    var d = this.r.map_distance(...castle, ...this.cur_expansion)
+                    if (d < best_d){
+                        best_d = d
+                        best_castle = castle.slice()
+                    }
                 }
-            }
 
-            if (best_castle[0] == this.r.me.x && best_castle[1] == this.r.me.y){
-                this.am_expanding = true
-            }
+                if (best_castle[0] == this.r.me.x && best_castle[1] == this.r.me.y){
+                    this.am_expanding = true
+                }
 
-            var test_coord = 0
-            if (this.sym == 'x') {
-                test_coord = 1
-            }
+                var test_coord = 0
+                if (this.sym == 'x') {
+                    test_coord = 1
+                }
 
-            if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.25*this.r.map.length) this.contested_expansion = true
-            if (this.possible_expansions.length == 0) this.finished_expand_turn = step
+                if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.25*this.r.map.length) this.contested_expansion = true
+                if (this.possible_expansions.length == 0) this.finished_expand_turn = step
+            }
         }
 
         if (this.am_expanding && !this.pilgrim_dispatched){
@@ -287,7 +291,7 @@ export class Castle{
             var min_fuel = 50*(this.num_castles) + Math.ceil(Math.sqrt(this.furthest_outpost))
             if (this.r.karbonite >= min_karb && this.r.fuel >= min_fuel){
                 this.r.signal_encode("1111", 0, 0, this.furthest_outpost)
-                if (q < 1) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                if (q < 0) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 return this.r.buildUnit(SPECS.CRUSADER, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
             }        
         }
@@ -298,7 +302,7 @@ export class Castle{
                 var header = this.r.parse_header(unit.signal)
                 if (header == '1111'){
                     var q = Math.random()
-                    if (q < 1) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                    if (q < 0) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                     return this.r.buildUnit(SPECS.CRUSADER, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 }
             }
