@@ -17,6 +17,7 @@ export class BaseBot extends BCAbstractRobot{
                                 [1.54, 1.82, 0.00, 1.82, 1.54],
                                 [1.54, 1.82, 1.82, 1.82, 1.54],
                                 [1.54, 1.54, 1.54, 1.54, 1.54]]
+        this.used_map = null
     }
 
     bfs(startx, starty, x, y, ignore_goal=false, fast=true) {
@@ -28,6 +29,7 @@ export class BaseBot extends BCAbstractRobot{
         traffic-jam behavior: if the way to the goal, or the goal itself, is
         blocked by another robot, this robot will stop
         */
+        var path_list = new DynamicallySortedList()
 
         if (x == startx && y == starty){
             return null
@@ -35,15 +37,23 @@ export class BaseBot extends BCAbstractRobot{
 
         var paths = [[[startx, starty]]]
 
-        var used_map = []
-        for (var i = 0; i < this.map.length; i++){
-            used_map[i] = []
-            for (var j = 0; j<  this.map.length; j++){
-                used_map[i][j] = false
+        if (this.used_map == null){
+            this.used_map = []
+            for (var i = 0; i < this.map.length; i++){
+                this.used_map[i] = []
+                for (var j = 0; j<  this.map.length; j++){
+                    this.used_map[i][j] = false
+                }
+            }
+        } else {
+            for (var i = 0; i < this.map.length; i++){
+                for (var j = 0; j<  this.map.length; j++){
+                    this.used_map[i][j] = false
+                }
             }
         }
 
-        used_map[starty][startx] = true
+        this.used_map[starty][startx] = true
         var visible_robot_map = this.getVisibleRobotMap()
 
         while (paths.length > 0){
@@ -57,8 +67,8 @@ export class BaseBot extends BCAbstractRobot{
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
                     if (this.traversable(newx, newy, visible_robot_map)){
-                        if (!used_map[newy][newx]){
-                            used_map[newy][newx] = true
+                        if (!this.used_map[newy][newx]){
+                            this.used_map[newy][newx] = true
                             var newpath = cur_path.slice(0, cur_path.length)
                             newpath.push([newx, newy])
                             if (ignore_goal && this.is_adjacent(newx, newy, x, y)){
@@ -68,7 +78,10 @@ export class BaseBot extends BCAbstractRobot{
                                 if (!ignore_goal) return newpath.slice(1)
                                 else continue
                             }
-                            new_paths.push(newpath)
+                            path_list.add(newpath.slice(1), -this.map_distance(newx, newy, x, y))
+                            if (newpath.length < 10){
+                                new_paths.push(newpath)
+                            }
                         }
                     }
                 }
@@ -77,6 +90,7 @@ export class BaseBot extends BCAbstractRobot{
                 paths = new_paths.slice()
             }
         }
+        return path_list.get()[0]
         return null
     }
 
@@ -151,9 +165,7 @@ export class BaseBot extends BCAbstractRobot{
                 }
             }
         }
-        var l = list.get().slice()
-        if (l.length <= max) return l
-        return l.slice(0,max)
+        return list.get()
     }
 
     erode_expansion_score_heat_map(sym, heat_map, allied_castle_list)
@@ -193,10 +205,10 @@ export class BaseBot extends BCAbstractRobot{
             for (var j = ybounds[0]; j<=ybounds[1]; j++){
                 var cur_score = heat_map[j][i]
                 var valid = true
-                for (var k = 0; k < this.resource_kernel.length; k ++){
-                    for (var l = 0; l < this.resource_kernel.length; l++){
-                        var x = i + k - 2
-                        var y = j + l - 2
+                for (var k = 0; k < this.resource_kernel.length+2; k ++){
+                    for (var l = 0; l < this.resource_kernel.length+2; l++){
+                        var x = i + k - 3
+                        var y = j + l - 3
                         if (!this.in_bounds(x, y)) continue
                         if (heat_map[y][x] > cur_score)
                         {
@@ -439,7 +451,7 @@ export class BaseBot extends BCAbstractRobot{
     }
 
     is_adjacent(x1, y1, x2, y2){
-        return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2))
+        return ((Math.abs(x1-x2) < 2) && (Math.abs(y1-y2) < 2)) && !(x1 == x2 && y1==y2)
     }
 
     is_ally_by_id(id, units){
@@ -688,6 +700,7 @@ export class Allied_Castle_Finder{
         this.enemy_castle_list = []
         this.castle_turn_order = 0
         this.num_castles = 1
+        this.allied_castle_ids = [r.me.id]
     }
     find(units, sym){
         if (this.done){
@@ -706,6 +719,7 @@ export class Allied_Castle_Finder{
             for (var i in units){
                 if (units[i].id != this.r.me.id && units[i].castle_talk != 0){
                     this.allied_castles[units[i].id] = [units[i].castle_talk - 1, 0]
+                    this.allied_castle_ids.push(units[i].id)
                     this.num_castles ++
                 }
             }
@@ -788,7 +802,7 @@ class DynamicallySortedList{
                 inserted = true
                 break
             }
-        }
+        }         
         if (!inserted){
             this.scores.push(score)
             this.list.push(item.slice())

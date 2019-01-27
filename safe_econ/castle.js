@@ -10,27 +10,29 @@ import {Allied_Castle_Finder} from 'funcfile.js'
 
 /* signal header key:
 1000, 1001, 1010: build church, church turn order
+1110: attack that location
 */
 
-const PROPHET_CHANCE = 0
+const PROPHET_CHANCE = .3
  
 
 export class Castle{
     constructor(r){
         this.allied_castle_list = null
+        this.allied_castle_ids = null
         this.all_expansions = null
         this.all_finished = false
         this.am_expanding = false
         this.anti_rush_budget = 100
         this.castle_turn_order = null
         this.check_to_expand = false
-        this.contested_expansion = false
         this.cur_expansion = null
         this.defensive_build = null
         this.defended_rush = false
         this.economy = true
         this.enemy_castle_list = null
         this.furthest_outpost = null
+        this.go_now = false
         this.init_pilgrims = null
         this.possible_expansions = null
         this.fuel_saturation = null
@@ -40,17 +42,20 @@ export class Castle{
         this.num_expansions = 0
         this.num_finished_econ = 0
         this.num_castles = null
+        this.num_churches = 0
         this.num_units = [0,0,0,0,0,0]
         this.num_bodyguards = 0
         this.max_pilgrim_range = 5
         this.pilgrim_dispatched
         this.r = r
+        this.request_ack = false
         this.synced_build = false
         this.synced_build_rush = false
         this.resource_saturation = null
         this.rush_castle = false
         this.rush_distance = null
         this.sym = null
+        this.tried_again = false
         this.last_hp = null
         this.expand = false
         this.finished_expand_turn = null
@@ -59,7 +64,16 @@ export class Castle{
     turn(step){
         //this.r.log(step)
         var units = this.r.getVisibleRobots()
-        if (step % 5 == 0 && this.castle_turn_order != null && this.castle_turn_order == 0) this.r.log(step)
+        if (step % 5 == 0 && this.castle_turn_order != null && this.castle_turn_order == 0){
+            this.r.log("Turn: " + step.toString())
+        } 
+        //this.r.log("Turn: " + step.toString())
+        //this.r.log(this.r.bfs(this.r.me.x, this.r.me.y, 27, 55, true, true))
+        //return
+
+//        if(this.castle_turn_order != null){
+//            this.castle_turn_order = (this.castle_turn_order + 1)%this.num_castles
+//        }
 
         // see if damage was taken
         if (this.last_hp == null) {
@@ -67,6 +81,20 @@ export class Castle{
         }
         var damage_taken = this.r.me.health != this.last_hp
         this.last_hp = this.r.me.health
+        
+        if (step > 10){
+            var allied_castles = 0
+            for (var i in units){
+                unit = units[i]
+                for (var j in this.allied_castle_ids){
+                    if (unit.id == this.allied_castle_ids[j]) allied_castles ++
+                    break
+                }
+            }
+            if (allied_castles < this.num_castles){
+                this.num_castles --
+            }
+        }
 
         if (this.sym == null){
             this.sym = this.r.find_sym(this.r.map)
@@ -95,6 +123,7 @@ export class Castle{
             this.rush_distance = d
             this.rush_castle = castle[0] == this.r.me.x && castle[1] == this.r.me.y
             this.check_to_expand = true
+            this.allied_castle_ids = this.r.allied_castle_finder.allied_castle_ids.slice()
         }
 
         if (this.resource_saturation == null){
@@ -142,7 +171,7 @@ export class Castle{
         }
         var preacher_fcs = this.r.preacher_fire_control(units)
         if (preacher_fcs != null){
-            this.r.signal_encode("1111", ...preacher_fcs, 100)
+            this.r.signal_encode("1110", ...preacher_fcs, 100)
         }         
 
         if ( this.defensive_build != null){
@@ -158,15 +187,48 @@ export class Castle{
 
         for (var i in units){
             var unit = units[i]
+            if (unit.id == this.r.me.id ) continue
+            
             if (unit.castle_talk == 255){
+                this.r.log("recognize new church")
+                if (this.possible_expansions.length > 0) this.check_to_expand = true
+                else this.finished_expand_turn = step
+                this.am_expanding = false
+                this.pilgrim_dispatched = false
+                this.num_bodyguards = 0
+                this.num_churches ++
+                this.tried_again = false
+                this.go_now = false
+                this.request_ack = false
+            }
+
+            if (unit.castle_talk == 254){
+                if (!this.request_ack){
+                    this.request_ack = true
+                    this.num_bodyguards = 4
+                    this.pilgrim_dispatched = false
+                }
+            }
+
+            if (unit.castle_talk == 253){
+                //give up
                 if (this.possible_expansions.length > 0) this.check_to_expand = true
                 this.am_expanding = false
                 this.pilgrim_dispatched = false
-                this.contested_expansion = false
                 this.num_bodyguards = 0
-                this.num_castles ++
                 if (this.possible_expansions.length == 0) this.finished_expand_turn = step
             }
+            if (unit.castle_talk == 252){
+                this.go_now = true
+            }
+        }
+
+        if (this.am_expanding && this.r.karbonite > 300){
+            if (this.possible_expansions.length > 0) this.check_to_expand = true
+            this.am_expanding = false
+            this.pilgrim_dispatched = false
+            this.num_bodyguards = 0
+            if (this.possible_expansions.length == 0) this.finished_expand_turn = step
         }
 
         if (this.defensive_build != null){
@@ -177,9 +239,7 @@ export class Castle{
         if (this.check_to_expand){
             this.check_to_expand = false
             if (this.possible_expansions == null){
-                this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list, 3)
-                this.r.log("found these expansions")
-                this.r.log(this.possible_expansions.length)
+                this.possible_expansions = this.r.find_good_expansions( this.sym, [this.r.karbonite_map, this.r.fuel_map], this.allied_castle_list, 30)
                 this.all_expansions = this.possible_expansions.slice()
                 this.num_expansions = this.possible_expansions.length
             }
@@ -212,7 +272,7 @@ export class Castle{
 
                 //if (Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length) < 0.25*this.r.map.length) this.contested_expansion = true
                 var d_to_center = Math.abs(this.cur_expansion[test_coord] - 0.5*this.r.map.length)
-                this.num_bodyguards = Math.ceil(5*(0.5*this.r.map.length - d_to_center))/(0.5*this.r.map.length)
+                this.num_bodyguards = Math.ceil(6*(0.5*this.r.map.length - d_to_center))/(0.5*this.r.map.length)
                 if (d_to_center >= 0.25*this.r.map.length) this.num_bodyguards = 0
             }
         }
@@ -227,45 +287,25 @@ export class Castle{
                     karb_reserve += SPECS.UNITS[SPECS.PROPHET].CONSTRUCTION_KARBONITE
                 }
             }
-            var which_church = this.num_expansions-this.possible_expansions.length-1
             if (this.r.karbonite >= karb_reserve && this.r.fuel >= fuel_reserve){
-                if (this.num_bodyguards > 0){
-                    this.r.log("this is a contested expansion, we need an escort")
+                if (this.num_bodyguards > 0 && !this.go_now){
+                    //this.r.log("this is a contested expansion, we need an escort")
                     if (escort_available) {
-                        this.r.log("an escort is available, dispatching pilgrim")
-                        switch (which_church){
-                            case(0):
-                                this.r.signal_encode("1000", ...this.cur_expansion, 100)
-                                break
-                            case(1):
-                                this.r.signal_encode("1001", ...this.cur_expansion, 100)
-                                break
-                            case(2):
-                                this.r.signal_encode("1010", ...this.cur_expansion, 100)
-                                break
-                        }
+                        this.r.signal_encode("1000", ...this.cur_expansion, 100)
                         this.pilgrim_dispatched = true
                         return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
                     } else {
-                        this.r.log("not enough escorts available for contested expansion, building escort")
+                        //this.r.log("not enough escorts available for contested expansion, building escort")
                         this.pilgrim_dispatched = false
                         return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
                     }
                 } else {
-                    this.r.log("no escort required for uncontested expansion")
-                    switch (which_church){
-                        case(0):
-                            this.r.signal_encode("1000", ...this.cur_expansion, 2)
-                            break
-                        case(1):
-                            this.r.signal_encode("1001", ...this.cur_expansion, 2)
-                            break
-                        case(2):
-                            this.r.signal_encode("1010", ...this.cur_expansion, 2)
-                            break
-                    }
+                    //this.r.log("no escort required for uncontested expansion")
+                    this.r.signal_encode("1000", ...this.cur_expansion, 2)
                     this.pilgrim_dispatched = true
-                    return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.x, this.r.y))
+                    this.request_ack = false
+                    this.go_now = false
+                    return this.r.buildUnit(SPECS.PILGRIM, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 }
             }
         }
@@ -301,8 +341,10 @@ export class Castle{
                 }
                 this.furthest_outpost = d
             }
-            var min_karb = 25*(this.num_castles)
-            var min_fuel = 50*(this.num_castles) + Math.ceil(Math.sqrt(this.furthest_outpost))
+
+            var min_karb = 25*(this.num_castles+this.num_churches)*1.1
+            var min_fuel = (50*(this.num_castles+this.num_churches) + Math.ceil(Math.sqrt(this.furthest_outpost)))*1.1
+
             if (this.r.karbonite >= min_karb && this.r.fuel >= min_fuel){
                 this.r.signal_encode("1111", 0, 0, this.furthest_outpost)
                 var q = Math.random()

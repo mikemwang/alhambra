@@ -22,25 +22,56 @@ export class Pilgrim{
         if (this.r.is_adjacent(this.r.me.x, this.r.me.y, ...this.target_expansion)){
             if (this.r.karbonite >= 50 && this.r.fuel >= 200 && this.r.traversable(...this.target_expansion, this.r.getVisibleRobotMap())){
                 this.r.log("built church")
-                this.r.castleTalk(255)
-                this.r.signal_encode("1011", this.church_turn, this.church_turn, 3)
                 this.expanding = false
                 this.home_depo = this.target_expansion.slice()
                 return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
-            } else {
-                return
-            }
+            }         
         }
+
         if (this.r.me.x == this.target_expansion[0] && this.r.me.y == this.target_expansion[1]){
             var d = this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y)
             if (d != null){
                 return this.r.move(...d)
             }
         }
+
+        var hostile_units = false
+        var hostile_unit = null
+        var friendly_units = false
+        for (var i in units){
+            var unit = units[i]
+            if (unit.team != this.r.me.team && unit.unit != SPECS.PILGRIM){
+                hostile_units = true
+                hostile_unit = [unit.x, unit.y]
+            } else if (unit.id != this.r.me.id && unit.team == this.r.me.team){
+                friendly_units = true
+            }
+        }
+
+        if (hostile_units){
+            if (!friendly_units){
+                this.r.castleTalk(253)
+                this.target_expansion = null
+                this.expanding = false
+                var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true, true)        
+                if (path != null){
+                    return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
+                }
+            } else {
+                this.r.signal_encode("1110", ...hostile_unit, 100)
+                var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true, true)        
+                if (path != null){
+                    return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
+                }
+                return
+            }
+        }
+
         var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_expansion, true, true)        
         if (path != null){
             return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
         }
+        return
     }
 
     turn(step){
@@ -58,10 +89,9 @@ export class Pilgrim{
                 if (this.r.isRadioing(unit)) {
                     var header = this.r.parse_header(unit.signal)
                     var coords = this.r.parse_coords(unit.signal)
-                    if (header == '1000' || header == '1001' || header == '1010'){
+                    if (header == '1000'){
                         this.target_expansion = coords.slice()
                         this.expanding = true
-                        this.church_turn = parseInt(header.substring(2,4), 2)
                         break
                     }
                 }
@@ -84,7 +114,6 @@ export class Pilgrim{
             }
         }
 
-
         if (this.expanding) {
             return this.expand_phase(step, units)
         }
@@ -103,7 +132,8 @@ export class Pilgrim{
             }
         }
 
-        if (this.target_resource == null){
+
+        if (this.target_resource == null || this.r.getVisibleRobotMap()[this.target_resource[1]][this.target_resource[0]] > 0){
             var path = null
             var done = false
             do {
@@ -115,33 +145,42 @@ export class Pilgrim{
                     this.karb_bot = !this.karb_bot
                     path = null
                 } else if (this.saturated && path == null) {
-                    this.r.log("USELESS PILGRIM")
                     done = true
                 } else {
                     done = true
                 }
             }while(!done)
 
+
             if (path == null){
-                this.r.log("never found a resource")
+                if (this.r.r_squared(this.r.me.x, this.r.me.y, ...this.home_depo) > 16){
+                    this.r.log("trying to go home")
+                    var way_home = this.r.bfs(this.r.me.x, this.r.me.y, ...this.home_depo, true, true)
+                    if (way_home != null){
+                        return this.r.move(way_home[0][0]-this.r.me.x, way_home[0][1]-this.r.me.y)
+                    }
+                }
                 return
+            } else {
+                if (this.karb_bot){
+                    this.target_karb = path[path.length-1]
+                }
+                else {
+                    this.target_fuel = path[path.length-1]
+                }
+                this.target_resource = this.karb_bot ? this.target_karb : this.target_fuel
             }
 
-            if (this.karb_bot){
-                this.target_karb = path[path.length-1]
-            }
-            else {
-                this.target_fuel = path[path.length-1]
-            }
-            this.target_resource = this.karb_bot ? this.target_karb : this.target_fuel
         }
 
         var resource = this.karb_bot ? this.r.me.karbonite : this.r.me.fuel
         var max_resource = this.karb_bot ? 20 : 100
         var resource_map = this.karb_bot ? this.r.karbonite_map : this.r.fuel_map
 
+        var drop_off = this.r.karbonite == 20 || this.r.fuel == 100
+
         // mine phase
-        if ((this.first_run >= 3 && resource < max_resource) || (this.first_run < 3 && resource < 0.5*max_resource && this.karb_bot)){
+        if (!drop_off && ((this.first_run >= 3 && resource < max_resource) || (this.first_run < 3 && resource < 0.5*max_resource && this.karb_bot))){
             if (resource_map[this.r.me.y][this.r.me.x]){
                 return this.r.mine()
             }

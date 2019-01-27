@@ -6,6 +6,7 @@ export class Preacher{
         this.lattice_occupancy = []
         this.priority_list = [0,0,0,0,1,0]
         this.sym = null
+        this.target_loc = null
 
     }
     turn(step){
@@ -22,7 +23,7 @@ export class Preacher{
                 var header = this.r.parse_header(unit.signal)
                 var msg = this.r.parse_coords(unit.signal)
 
-                if (header == '1111'){
+                if (header == '1110'){
                     this.r.log("decoded")
                     this.r.log(msg)
                     var rad = this.r.r_squared(...msg, this.r.me.x, this.r.me.y)
@@ -31,7 +32,9 @@ export class Preacher{
                         this.r.log("valid fct")
                         fire_control_target = msg.slice()
                     } 
-                    break
+                }
+                if (header == '1100') {
+                    this.target_loc = msg.slice()
                 }
             }
         }
@@ -48,6 +51,11 @@ export class Preacher{
         if (fire_control_target != null){
             this.r.log(fire_control_target)
             return this.r.attack(fire_control_target[0]-this.r.me.x, fire_control_target[1]-this.r.me.y)
+        }
+
+        if (this.target_loc != null){
+            var path = this.r.bfs(this.r.me.x, this.r.me.y, ...this.target_loc, true, true)
+            if (path != null) return this.r.move(path[0][0] - this.r.me.x, path[0][1] - this.r.me.y)
         }
 
         if (this.r.me.x%2 != 0 || this.r.me.y%2 != 0 ||this.r.karbonite_map[this.r.me.y][this.r.me.x] || this.r.fuel_map[this.r.me.y][this.r.me.x] ){
