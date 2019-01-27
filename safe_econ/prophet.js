@@ -4,7 +4,7 @@ export class Prophet{
     constructor (r){
         this.r = r
         this.lattice_occupancy = []
-        this.priority_list = [0,0,0,0,1,0]
+        this.priority_list = [0,1,2,3,5,4]
         this.sym = null
         this.bodyguard = false
         this.target_expansion = null

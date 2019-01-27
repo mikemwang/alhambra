@@ -8,6 +8,7 @@ export class BaseBot extends BCAbstractRobot{
                              [-1,+1], [+0,+1], [+1, +1]]
 
         this.fast_mvmt_choices = [[-2, 0], [-1, -1], [-1, 0], [-1, 1], [0, -2], [0, -1], [0, 0], [0, 1],[0, 2], [1, -1], [1, 0], [1, 1], [2, 0]]
+        this.crusader_mvmt = [[-2, -2], [-2, -1], [-2, 0], [-2, 1], [-2, 2], [-1, -2], [-1, -1], [-1, 0], [-1, 1], [-1, 2], [0, -2], [0, -1], [0, 0], [0, 1], [0, 2], [1, -2], [1, -1], [1, 0], [1, 1], [1, 2], [2, -2], [2, -1], [2, 0], [2, 1], [2, 2]]
 
         this.allied_castle_finder = null
 
@@ -49,7 +50,9 @@ export class BaseBot extends BCAbstractRobot{
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                var choices = fast ? this.random_ordering(this.fast_mvmt_choices) : this.random_ordering(this.mvmt_choices)
+                var choices = []
+                if (this.me.unit = SPECS.CRUSADER) choices = this.random_ordering(this.crusader_mvmt)
+                choices = fast ? this.random_ordering(this.fast_mvmt_choices) : this.random_ordering(this.mvmt_choices)
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]
@@ -63,7 +66,7 @@ export class BaseBot extends BCAbstractRobot{
                             }
                             if (newx == x && newy == y) {
                                 if (!ignore_goal) return newpath.slice(1)
-                                continue
+                                else continue
                             }
                             new_paths.push(newpath)
                         }
@@ -77,6 +80,54 @@ export class BaseBot extends BCAbstractRobot{
         return null
     }
 
+    crusader_combat_micro(units) {
+
+       var startx = this.me.x
+       var starty = this.me.y
+
+        var paths = [[[startx, starty]]]
+
+        var used_map = []
+        for (var i = 0; i < this.map.length; i++){
+            used_map[i] = []
+            for (var j = 0; j<  this.map.length; j++){
+                used_map[i][j] = false
+            }
+        }
+
+        used_map[starty][startx] = true
+        var visible_robot_map = this.getVisibleRobotMap()
+
+        while (paths.length > 0){
+            var new_paths = []
+            while (paths.length > 0){
+                var cur_path = paths.shift()  // get the path in the beginning
+                var choices = this.random_ordering(this.crusader_mvmt)
+                for (var i in choices){
+                    var newx = cur_path[cur_path.length-1][0] + choices[i][0]
+                    var newy = cur_path[cur_path.length-1][1] + choices[i][1]
+                    if (this.r_squared(0,0,newx,newy) > 49) continue
+                    if (this.traversable(newx, newy, visible_robot_map)){
+                        if (!used_map[newy][newx]){
+                            used_map[newy][newx] = true
+                            var newpath = cur_path.slice(0, cur_path.length)
+                            newpath.push([newx, newy])
+                            for (var u in units){
+                                unit = units[u]
+                                if (this.in_range(newx, newy, unit.x, unit.y))
+                                return newpath.slice(1)    
+                            }
+                            new_paths.push(newpath.slice())
+                        }
+                    }
+                }
+            }
+            if (new_paths.length > 0) {
+                paths = new_paths.slice()
+            }
+        }
+        return null
+    }
     find_free_adjacent_tile(x, y){
         for (var i in this.random_ordering(this.mvmt_choices)){
             var choice = this.mvmt_choices[i];
@@ -282,7 +333,7 @@ export class BaseBot extends BCAbstractRobot{
             var new_paths = []
             while (paths.length > 0){
                 var cur_path = paths.shift()  // get the path in the beginning
-                var choices = this.random_ordering(this.fast_mvmt_choices)
+                var choices = this.me.unit == SPECS.CRUSADER ? this.random_ordering(this.crusader_mvmt) : this.random_ordering(this.fast_mvmt_choices)
                 for (var i in choices){
                     var newx = cur_path[cur_path.length-1][0] + choices[i][0]
                     var newy = cur_path[cur_path.length-1][1] + choices[i][1]

@@ -1,5 +1,7 @@
 import {SPECS} from 'battlecode'
 
+const PROPHET_CHANCE = 0
+
 export class Church{
     constructor (r){
         this.r = r
@@ -11,7 +13,7 @@ export class Church{
         this.karbonite_saturation = null
         this.fuel_saturation = null
         this.sym = null
-        this.max_pilgrim_range = 3
+        this.max_pilgrim_range = 5
         this.church_turn_order = 0
     }
     turn (step){
@@ -61,18 +63,19 @@ export class Church{
             this.r.signal_encode("1111", ...preacher_fcs, 100)
         }         
 
-        if ( this.defensive_build != null){
-            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_FUEL){
-                this.num_units[this.defensive_build] ++
-                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
-            }
-        }
-
         var p = this.r.get_visible_allied_units(units, SPECS.PILGRIM)
         if (this.desired_pilgrims < this.resource_saturation && step % 7 == 0){
             this.desired_pilgrims ++
         }
 
+        if ( this.defensive_build != null){
+            if (this.r.karbonite >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_KARBONITE && this.r.fuel >= SPECS.UNITS[this.defensive_build].CONSTRUCTION_FUEL){
+                this.num_units[this.defensive_build] ++
+                return this.r.buildUnit(this.defensive_build, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+            }
+            return
+        }
+        // if we need defense, save up for those units
         if ( p == 0 || (Math.min(this.num_units[SPECS.PILGRIM]+1, p+1) <= Math.floor(this.desired_pilgrims) && this.r.karbonite >= 60))
         {
             this.num_units[SPECS.PILGRIM] ++
@@ -88,7 +91,7 @@ export class Church{
                 var header = this.r.parse_header(unit.signal)
                 if (header == '1111'){
                     var q = Math.random()
-                    if (q < 0) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
+                    if (q <= PROPHET_CHANCE) return this.r.buildUnit(SPECS.PROPHET, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                     return this.r.buildUnit(SPECS.CRUSADER, ...this.r.find_free_adjacent_tile(this.r.me.x, this.r.me.y))
                 }
             }

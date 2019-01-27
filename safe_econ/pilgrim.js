@@ -27,6 +27,8 @@ export class Pilgrim{
                 this.expanding = false
                 this.home_depo = this.target_expansion.slice()
                 return this.r.buildUnit(SPECS.CHURCH, this.target_expansion[0]-this.r.me.x, this.target_expansion[1]-this.r.me.y)
+            } else {
+                return
             }
         }
         if (this.r.me.x == this.target_expansion[0] && this.r.me.y == this.target_expansion[1]){
